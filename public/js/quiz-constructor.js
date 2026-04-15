@@ -1,15 +1,10 @@
 // public/js/quiz-constructor.js
 
-let currentQuiz = null;
-let questions = [];
-let currentQuestionIndex = -1;
+// Управление состоянием перенесено в public/js/state/constructor.state.js
+// Остается для обратной совместимости
 let sortableInstance = null;
 
-function syncQuizEditorState() {
-    if (!window.QuizEditorState) return;
-    QuizEditorState.setCurrentQuiz(currentQuiz);
-    QuizEditorState.setCurrentQuestion(questions[currentQuestionIndex] || null);
-}
+// Оркестрирует всю логику конструктора
 
 function initConstructor() {
     const authSection = document.getElementById('authSection');
@@ -35,6 +30,9 @@ async function createNewQuiz(title, description) {
         currentQuiz = response.quiz;
         questions = [];
         currentQuestionIndex = -1;
+
+        ConstructorState.setCurrentQuiz(currentQuiz);
+        ConstructorState.setQuestions(questions);
         syncQuizEditorState();
 
         updateQuizDisplay();
@@ -68,6 +66,9 @@ async function selectQuiz(quizId) {
         currentQuiz = response.quiz;
         questions = Array.isArray(response.quiz?.questions) ? response.quiz.questions : [];
         questions.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        ConstructorState.setCurrentQuiz(currentQuiz);
+        ConstructorState.setQuestions(questions);
         syncQuizEditorState();
 
         updateQuizDisplay();
@@ -128,40 +129,14 @@ function enableQuizActions() {
 }
 
 function renderQuestionsList() {
+    window.renderQuestionsList(questions, currentQuestionIndex, 'editQuestion');
+    initDragAndDrop();
+}
+
+function initDragAndDrop() {
     const container = document.getElementById('questionsList');
     if (!container) return;
 
-    if (!questions.length) {
-        container.innerHTML = '<div class="empty-state">📭 Нет вопросов</div>';
-        return;
-    }
-
-    container.innerHTML = questions.map((question, index) => {
-        const handler = typeof QuestionTypeFactory !== 'undefined'
-            ? QuestionTypeFactory.getType(question.type)
-            : { icon: '📝', name: question.type || 'TEXT' };
-
-        return `
-            <div class="question-item ${index === currentQuestionIndex ? 'active' : ''}" data-id="${question.id || question.tempId}" onclick="editQuestion(${index})">
-                <div class="question-header">
-                    <span class="drag-handle">⋮⋮</span>
-                    <span class="question-number">${index + 1}</span>
-                    <span class="question-title" title="${escapeHtml(question.text || '')}">
-                        ${escapeHtml(truncateText(question.text || 'Без текста', 30))}
-                    </span>
-                    <div class="question-badges">
-                        <span class="badge" title="${handler.name}">${handler.icon}</span>
-                        <span class="badge badge-primary">${question.points || 100}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    initDragAndDrop(container);
-}
-
-function initDragAndDrop(container) {
     if (sortableInstance) {
         sortableInstance.destroy();
     }
@@ -184,7 +159,7 @@ function initDragAndDrop(container) {
                 ...question,
                 order: index,
             }));
-
+            ConstructorState.setQuestions(questions);
             renderQuestionsList();
             showToast('Порядок изменён. Нажмите "Сохранить порядок"', 'info');
         },
@@ -207,6 +182,7 @@ async function saveQuizOrder() {
     try {
         const response = await QuizService.reorderQuestions(currentQuiz.id, persistedIds);
         questions = response.questions || questions;
+        ConstructorState.setQuestions(questions);
         renderQuestionsList();
         showToast('✅ Порядок сохранён', 'success');
     } catch (error) {
@@ -221,7 +197,7 @@ function createDefaultQuestion() {
         type: 'TEXT',
         points: 100,
         timeLimit: 30,
-        order: questions.length,
+        order: ConstructorState.getState().questions.length,
         pointsAtStart: 100,
         pointsAtEnd: 100,
         penaltyPoints: 0,
@@ -250,12 +226,13 @@ function createDefaultQuestion() {
 
 function addNewQuestion() {
     if (!currentQuiz) {
-        showToast('Сначала создайте квиз', 'error');
+        showToast('Сначала создай��е квиз', 'error');
         return;
     }
 
     const question = createDefaultQuestion();
     questions.push(question);
+    ConstructorState.setQuestions(questions);
     renderQuestionsList();
     editQuestion(questions.length - 1);
 }
@@ -265,58 +242,18 @@ function editQuestion(index) {
     if (!question) return;
 
     currentQuestionIndex = index;
+    ConstructorState.setCurrentQuestionIndex(index);
     syncQuizEditorState();
 
-    document.getElementById('editorPlaceholder').style.display = 'none';
-    document.getElementById('editorContent').style.display = 'block';
-
-    document.getElementById('questionText').value = question.text || '';
-    document.getElementById('questionPoints').value = question.points ?? 100;
-    document.getElementById('questionTime').value = question.timeLimit ?? 30;
-
-    if (typeof loadAdvancedSettings === 'function') {
-        loadAdvancedSettings(question);
-    }
-
-    applyQuestionTypeUI(question.type);
-    syncMediaPreview(question);
-    renderQuestionSpecificInputs(question);
-    renderQuestionsList();
+    updateQuestionEditorUI(question);
+    loadAdvancedSettings(question);
 }
 
 function resetEditor() {
     currentQuestionIndex = -1;
+    ConstructorState.setCurrentQuestionIndex(-1);
     syncQuizEditorState();
-
-    const placeholder = document.getElementById('editorPlaceholder');
-    const content = document.getElementById('editorContent');
-
-    if (placeholder) placeholder.style.display = 'block';
-    if (content) content.style.display = 'none';
-
-    const textEl = document.getElementById('questionText');
-    const pointsEl = document.getElementById('questionPoints');
-    const timeEl = document.getElementById('questionTime');
-    const mediaPreview = document.getElementById('mediaPreview');
-    const mediaUploadArea = document.getElementById('mediaUploadArea');
-    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
-
-    if (textEl) textEl.value = '';
-    if (pointsEl) pointsEl.value = 100;
-    if (timeEl) timeEl.value = 30;
-    if (mediaPreview) mediaPreview.innerHTML = '';
-    if (mediaUploadArea) mediaUploadArea.classList.remove('has-file');
-    if (uploadPlaceholder) uploadPlaceholder.textContent = '📁 Нажмите или перетащите файл';
-
-    const answersEditor = document.getElementById('answersEditor');
-    if (answersEditor) answersEditor.innerHTML = '';
-
-    const trueFalseSelect = document.getElementById('trueFalseSelect');
-    if (trueFalseSelect) trueFalseSelect.value = 'true';
-
-    document.querySelectorAll('#questionTypeSelector .type-btn').forEach((btn) => {
-        btn.classList.remove('active');
-    });
+    updateQuestionEditorUI(null);
 }
 
 function setQuestionType(type) {
@@ -350,39 +287,6 @@ function setQuestionType(type) {
     renderQuestionsList();
 }
 
-function applyQuestionTypeUI(type) {
-    document.querySelectorAll('#questionTypeSelector .type-btn').forEach((btn) => {
-        btn.classList.toggle('active', btn.dataset.type === type);
-    });
-
-    const answersSection = document.getElementById('answersSection');
-    const trueFalseSection = document.getElementById('trueFalseSection');
-
-    if (type === 'TRUEFALSE') {
-        if (answersSection) answersSection.style.display = 'none';
-        if (trueFalseSection) trueFalseSection.style.display = 'block';
-    } else {
-        if (answersSection) answersSection.style.display = 'block';
-        if (trueFalseSection) trueFalseSection.style.display = 'none';
-    }
-}
-
-function renderQuestionSpecificInputs(question) {
-    if (question.type === 'TRUEFALSE') {
-        const trueAnswer = Array.isArray(question.answers)
-            ? question.answers.find((answer) => answer.text === 'Правда')
-            : null;
-
-        const select = document.getElementById('trueFalseSelect');
-        if (select) {
-            select.value = trueAnswer?.isCorrect ? 'true' : 'false';
-        }
-        return;
-    }
-
-    renderAnswersEditor();
-}
-
 function collectQuestionFromEditor() {
     if (currentQuestionIndex < 0 || !questions[currentQuestionIndex]) {
         throw new Error('Вопрос не выбран');
@@ -398,40 +302,8 @@ function collectQuestionFromEditor() {
         order: existing.order ?? currentQuestionIndex,
     };
 
-    if (typeof saveAdvancedSettings === 'function') {
-        saveAdvancedSettings(question);
-    }
-
-    if (question.type === 'TRUEFALSE') {
-        const trueSelected = document.getElementById('trueFalseSelect')?.value === 'true';
-        question.answers = [
-            { text: 'Правда', isCorrect: trueSelected, order: 0 },
-            { text: 'Ложь', isCorrect: !trueSelected, order: 1 },
-        ];
-    } else {
-        question.answers = normalizeEditorAnswers(existing.answers || []);
-    }
-
-    return question;
-}
-
-function normalizeEditorAnswers(fallbackAnswers) {
-    const items = document.querySelectorAll('.answer-item');
-
-    if (!items.length) {
-        return Array.isArray(fallbackAnswers) ? fallbackAnswers : [];
-    }
-
-    return Array.from(items).map((item, index) => {
-        const text = item.querySelector('.answer-text')?.value?.trim() || '';
-        const correct = item.querySelector('.answer-correct')?.checked || false;
-
-        return {
-            text,
-            isCorrect: correct,
-            order: index,
-        };
-    });
+    // Сбор данных из формы
+    return QuestionEditorService.normalizeFormData(question, document);
 }
 
 async function saveCurrentQuestion() {
@@ -472,8 +344,10 @@ async function saveCurrentQuestion() {
         }
 
         questions[currentQuestionIndex] = response.question;
+        ConstructorState.setQuestions(questions);
         renderQuestionsList();
         editQuestion(currentQuestionIndex);
+        ConstructorState.markSaved();
         showToast('✅ Вопрос сохранён', 'success');
     } catch (error) {
         showToast(error.message || 'Ошибка сохранения вопроса', 'error');
@@ -502,40 +376,13 @@ async function deleteCurrentQuestion() {
             order: index,
         }));
 
+        ConstructorState.setQuestions(questions);
         renderQuestionsList();
         resetEditor();
         showToast('🗑️ Вопрос удалён', 'success');
     } catch (error) {
         showToast(error.message || 'Ошибка удаления вопроса', 'error');
     }
-}
-
-function renderAnswersEditor() {
-    const container = document.getElementById('answersEditor');
-    if (!container || currentQuestionIndex < 0 || !questions[currentQuestionIndex]) return;
-
-    const question = questions[currentQuestionIndex];
-    const answers = Array.isArray(question.answers) ? question.answers : [];
-
-    container.innerHTML = answers.map((answer, index) => `
-        <div class="answer-item d-flex gap-2 items-center mb-2">
-            <input
-                type="radio"
-                name="correctAnswer"
-                class="answer-correct"
-                ${answer.isCorrect ? 'checked' : ''}
-                onchange="setCorrectAnswer(${index})"
-            >
-            <input
-                type="text"
-                class="input answer-text"
-                value="${escapeHtml(answer.text || '')}"
-                oninput="updateAnswerText(${index}, this.value)"
-                placeholder="Текст ответа"
-            >
-            <button type="button" class="btn btn-outline btn-sm" onclick="removeAnswer(${index})">✖</button>
-        </div>
-    `).join('');
 }
 
 function setCorrectAnswer(index) {
@@ -546,7 +393,7 @@ function setCorrectAnswer(index) {
         isCorrect: i === index,
     }));
 
-    renderAnswersEditor();
+    renderAnswersEditor(questions[currentQuestionIndex].answers);
 }
 
 function updateAnswerText(index, value) {
@@ -570,7 +417,7 @@ function addAnswer() {
     });
 
     questions[currentQuestionIndex].answers = answers;
-    renderAnswersEditor();
+    renderAnswersEditor(answers);
 }
 
 function removeAnswer(index) {
@@ -593,7 +440,7 @@ function removeAnswer(index) {
         order: answerIndex,
     }));
 
-    renderAnswersEditor();
+    renderAnswersEditor(answers);
 }
 
 async function uploadMedia(event) {
@@ -638,57 +485,14 @@ async function uploadMedia(event) {
     event.target.value = '';
 }
 
-function syncMediaPreview(question) {
-    const preview = document.getElementById('mediaPreview');
-    if (!preview) return;
-
-    const handler = typeof QuestionTypeFactory !== 'undefined'
-        ? QuestionTypeFactory.getType(question.type)
-        : null;
-
-    const mediaType = handler?.mediaType || null;
-    const mediaUrl =
-        mediaType === 'image'
-            ? question.imageUrl
-            : mediaType === 'audio'
-              ? question.audioUrl
-              : mediaType === 'video'
-                ? question.videoUrl
-                : null;
-
-    if (!mediaUrl) {
-        preview.innerHTML = '';
-        document.getElementById('mediaUploadArea')?.classList.remove('has-file');
-        return;
-    }
-
-    document.getElementById('mediaUploadArea')?.classList.add('has-file');
-
-    if (mediaType === 'image') {
-        preview.innerHTML = `<img src="${mediaUrl}" alt="Preview" style="max-width:100%; border-radius:8px;">`;
-        return;
-    }
-
-    if (mediaType === 'audio') {
-        preview.innerHTML = `<audio controls src="${mediaUrl}" style="width:100%;"></audio>`;
-        return;
-    }
-
-    if (mediaType === 'video') {
-        preview.innerHTML = `<video controls src="${mediaUrl}" style="max-width:100%; border-radius:8px;"></video>`;
-        return;
-    }
-
-    preview.innerHTML = '';
+// Sync with legacy state
+function syncQuizEditorState() {
+    if (!window.QuizEditorState) return;
+    QuizEditorState.setCurrentQuiz(currentQuiz);
+    QuizEditorState.setCurrentQuestion(questions[currentQuestionIndex] || null);
 }
 
-window.renderAnswersEditor = renderAnswersEditor;
-window.setCorrectAnswer = setCorrectAnswer;
-window.updateAnswerText = updateAnswerText;
-window.addAnswer = addAnswer;
-window.removeAnswer = removeAnswer;
-window.uploadMedia = uploadMedia;
-
+// Legacy exports
 window.initConstructor = initConstructor;
 window.loadMyQuizzes = loadMyQuizzes;
 window.selectQuiz = selectQuiz;

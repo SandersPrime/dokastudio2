@@ -99,26 +99,8 @@ function loadAdvancedSettings(question) {
 }
 
 function saveAdvancedSettings(question) {
-    question.pointsAtStart = parseInt(document.getElementById('pointsAtStart')?.value, 10) || 100;
-    question.pointsAtEnd = parseInt(document.getElementById('pointsAtEnd')?.value, 10) || 100;
-    question.penaltyPoints = parseInt(document.getElementById('penaltyPoints')?.value, 10) || 0;
-    question.penaltyNoAnswer = parseInt(document.getElementById('penaltyNoAnswer')?.value, 10) || 0;
-    question.speedBonus1 = parseInt(document.getElementById('speedBonus1')?.value, 10) || 0;
-    question.speedBonus2 = parseInt(document.getElementById('speedBonus2')?.value, 10) || 0;
-    question.speedBonus3 = parseInt(document.getElementById('speedBonus3')?.value, 10) || 0;
-
-    question.autoJudge = document.getElementById('autoJudge')?.checked ?? true;
-    question.lockoutOnWrong = document.getElementById('lockoutOnWrong')?.checked ?? true;
-    question.showCorrectAnswer = document.getElementById('showCorrectAnswer')?.checked ?? true;
-    question.jokersEnabled = document.getElementById('jokersEnabled')?.checked ?? true;
-
-    question.countdownMode = document.getElementById('countdownMode')?.value || 'auto';
-    question.textReveal = document.getElementById('textReveal')?.value || 'none';
-    question.demographicGroup = document.getElementById('demographicGroup')?.value || null;
-    question.slideRouting = document.getElementById('slideRouting')?.value || null;
-    question.notes = document.getElementById('questionNotes')?.value || null;
-
-    return question;
+    // Теперь делегируется в QuestionEditorService
+    return { ...question, ...QuestionEditorService.collectAdvancedSettings(document) };
 }
 
 function initConstructorUI() {

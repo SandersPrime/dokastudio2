@@ -1,840 +1,624 @@
 // src/services/session.service.js
 
-const QRCode = require('qrcode');
-const jwt = require('jsonwebtoken');
-const sessionRepository = require('../repositories/session.repository');
-const { env } = require('../config/env');
-const { createHttpError } = require('../utils/http-error');
+const { prisma } = require('../config/prisma');
 
-const { SESSION_STATUSES } = require('../constants/session-statuses');
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
-function serializeQuestion(question, options = {}) {
-  const payload = {
-    id: question.id,
+/**
+ * Генерирует уникальный 6-значный PIN-код.
+ * @returns {Promise<string>}
+ */
+async function generateUniquePinCode() {
+  let pinCode;
+  let exists = true;
+
+  while (exists) {
+    pinCode = String(Math.floor(100000 + Math.random() * 900000));
+    const session = await prisma.gameSession.findUnique({ where: { pinCode } });
+    exists = !!session;
+  }
+
+  return pinCode;
+}
+
+/**
+ * Формирует payload лобби для рассылки клиентам.
+ * @param {Object} session
+ * @returns {Object}
+ */
+function buildLobbyPayload(session) {
+  return {
+    sessionId: session.id,
+    pinCode: session.pinCode,
+    status: session.status,
+    playerCount: session.players?.length ?? 0,
+    players: (session.players || []).map((p) => ({
+      id: p.id,
+      nickname: p.nickname,
+      score: p.score,
+    })),
+  };
+}
+
+/**
+ * Формирует payload вопроса для хоста и игроков.
+ * @param {Object} question
+ * @returns {{ hostPayload: Object, playerPayload: Object }}
+ */
+function buildQuestionPayload(question) {
+  const base = {
+    questionId: question.id,
     text: question.text,
     type: question.type,
     points: question.points,
-    timeLimit: question.timeLimit || 30,
+    timeLimit: question.timeLimit,
+    order: question.order,
     imageUrl: question.imageUrl || null,
     audioUrl: question.audioUrl || null,
     videoUrl: question.videoUrl || null,
-    answers: (question.answers || []).map((answer) => ({
-      id: answer.id,
-      text: answer.text,
-      imageUrl: answer.imageUrl || null,
-      order: answer.order,
+  };
+
+  const hostPayload = {
+    ...base,
+    answers: (question.answers || []).map((a) => ({
+      id: a.id,
+      text: a.text,
+      isCorrect: a.isCorrect,
+      order: a.order,
     })),
   };
 
-  if (options.includeHostNotes) {
-    payload.notes = question.notes || '';
-  }
+  const playerPayload = {
+    ...base,
+    answers: (question.answers || []).map((a) => ({
+      id: a.id,
+      text: a.text,
+      order: a.order,
+    })),
+  };
 
+  return { hostPayload, playerPayload };
+}
+
+/**
+ * Формирует payload таблицы лидеров.
+ * @param {Array} players
+ * @returns {Object}
+ */
+function buildLeaderboardPayload(players) {
+  const sorted = [...players].sort((a, b) => b.score - a.score);
   return {
-    ...payload,
+    leaderboard: sorted.map((p, index) => ({
+      rank: index + 1,
+      playerId: p.id,
+      nickname: p.nickname,
+      score: p.score,
+      correctAnswers: p.correctAnswers,
+    })),
   };
 }
 
-function serializeLeaderboard(players = []) {
-  return players
-    .map((player) => ({
-      id: player.id,
-      nickname: player.nickname,
-      score: player.score,
-      correctAnswers: player.correctAnswers,
-      connected: player.connected,
-      teamId: player.teamId || null,
-    }))
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return b.correctAnswers - a.correctAnswers;
-    });
-}
+// ─── Session CRUD ────────────────────────────────────────────────────────────
 
-async function generateUniquePinCode() {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const pinCode = String(Math.floor(100000 + Math.random() * 900000));
+/**
+ * Создаёт новую игровую сессию.
+ * @param {{ quizId: string, currentUser: Object }} params
+ * @returns {Promise<Object>}
+ */
+async function createSession({ quizId, currentUser }) {
+  if (!quizId) throw new Error('quizId обязателен');
 
-    const existing = await sessionRepository.gameSession.findUnique({
-      where: { pinCode },
-      select: { id: true },
-    });
-
-    if (!existing) {
-      return pinCode;
-    }
-  }
-
-  throw createHttpError(500, 'Не удалось сгенерировать PIN-код');
-}
-
-async function getQuizForSessionOrThrow(quizId, currentUser) {
-  const quiz = await sessionRepository.quiz.findUnique({
+  const quiz = await prisma.quiz.findUnique({
     where: { id: quizId },
-    include: {
-      questions: {
-        orderBy: { order: 'asc' },
-        include: {
-          answers: {
-            orderBy: { order: 'asc' },
-          },
-        },
-      },
-    },
+    include: { questions: { include: { answers: true }, orderBy: { order: 'asc' } } },
   });
 
-  if (!quiz) {
-    throw createHttpError(404, 'Квиз не найден');
-  }
+  if (!quiz) throw new Error('Квиз не найден');
 
-  if (quiz.authorId !== currentUser.id && currentUser.role !== 'ADMIN') {
-    throw createHttpError(403, 'Нет прав на запуск этого квиза');
-  }
-
-  if (!quiz.questions.length) {
-    throw createHttpError(400, 'В квизе нет вопросов');
-  }
-
-  return quiz;
-}
-
-async function createSession({ quizId, currentUser }) {
-  const quiz = await getQuizForSessionOrThrow(quizId, currentUser);
   const pinCode = await generateUniquePinCode();
 
-  const session = await sessionRepository.gameSession.create({
+  const session = await prisma.gameSession.create({
     data: {
-      quizId: quiz.id,
+      quizId,
       hostId: currentUser.id,
       pinCode,
-      status: SESSION_STATUSES.LOBBY,
+      status: 'LOBBY',
       currentQuestionIndex: 0,
     },
-    include: {
-      quiz: {
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          timePerQuestion: true,
-          showLeaderboard: true,
-        },
-      },
-      players: {
-        orderBy: { createdAt: 'asc' },
-      },
-    },
+    include: { players: true },
   });
-
-  const joinUrl = `${env.clientUrl}/play/${pinCode}`;
-  const qrCode = await QRCode.toDataURL(joinUrl);
-
-  return {
-    session,
-    joinUrl,
-    qrCode,
-  };
-}
-
-async function getSessionByPin(pinCode) {
-  const session = await sessionRepository.gameSession.findUnique({
-    where: { pinCode },
-    include: {
-      quiz: {
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          allowReconnect: true,
-          timePerQuestion: true,
-        },
-      },
-      players: {
-        orderBy: { createdAt: 'asc' },
-      },
-    },
-  });
-
-  if (!session) {
-    throw createHttpError(404, 'Игра не найдена');
-  }
-
-  if (session.status === SESSION_STATUSES.FINISHED) {
-    throw createHttpError(410, 'Игра уже завершена');
-  }
 
   return {
     session: {
       id: session.id,
       pinCode: session.pinCode,
       status: session.status,
-      currentQuestionIndex: session.currentQuestionIndex,
-      quiz: session.quiz,
-      playerCount: session.players.length,
+      quizId: session.quizId,
     },
   };
 }
 
-async function getSessionById({ sessionId, currentUser }) {
-  const session = await sessionRepository.gameSession.findUnique({
-    where: { id: sessionId },
-    include: {
-      quiz: {
-        include: {
-          questions: {
-            orderBy: { order: 'asc' },
-            include: {
-              answers: {
-                orderBy: { order: 'asc' },
-              },
-            },
-          },
-        },
-      },
-      players: {
-        orderBy: { score: 'desc' },
-      },
-    },
-  });
-
-  if (!session) {
-    throw createHttpError(404, 'Сессия не найдена');
-  }
-
-  if (session.hostId !== currentUser.id && currentUser.role !== 'ADMIN') {
-    throw createHttpError(403, 'Нет доступа к сессии');
-  }
-
-  return {
-    session: {
-      ...session,
-      leaderboard: serializeLeaderboard(session.players),
-    },
-  };
-}
-
-async function getFullSessionByPinOrThrow(pinCode) {
-  const session = await sessionRepository.gameSession.findUnique({
+/**
+ * Получает сессию по PIN-коду.
+ * @param {string} pinCode
+ * @returns {Promise<Object>}
+ */
+async function getSessionByPin(pinCode) {
+  const session = await prisma.gameSession.findUnique({
     where: { pinCode },
-    include: {
-      quiz: {
-        include: {
-          questions: {
-            orderBy: { order: 'asc' },
-            include: {
-              answers: {
-                orderBy: { order: 'asc' },
-              },
-            },
-          },
-        },
-      },
-      players: {
-        orderBy: { createdAt: 'asc' },
-      },
-    },
+    include: { players: true },
   });
 
-  if (!session) {
-    throw createHttpError(404, 'Сессия не найдена');
-  }
+  if (!session) throw new Error('Сессия не найдена');
 
-  return session;
+  return { session: { ...session, playerCount: session.players.length } };
 }
 
-function buildLobbyPayload(session) {
-  return {
-    sessionId: session.id,
-    pinCode: session.pinCode,
-    status: session.status,
-    playerCount: session.players.length,
-    players: serializeLeaderboard(session.players),
-  };
+/**
+ * Получает сессию по ID.
+ * @param {{ sessionId: string, currentUser: Object }} params
+ * @returns {Promise<Object>}
+ */
+async function getSessionById({ sessionId, currentUser }) {
+  const session = await prisma.gameSession.findUnique({
+    where: { id: sessionId },
+    include: { players: true },
+  });
+
+  if (!session) throw new Error('Сессия не найдена');
+  if (session.hostId !== currentUser.id) throw new Error('Нет доступа к сессии');
+
+  return { session: { ...session, playerCount: session.players.length } };
 }
 
-function buildQuestionPayload(session, options = {}) {
-  const questions = session.quiz.questions || [];
-  const question = questions[session.currentQuestionIndex];
+// ─── Host Socket Methods ─────────────────────────────────────────────────────
 
-  if (!question) {
-    return null;
-  }
-
-  return {
-    sessionId: session.id,
-    pinCode: session.pinCode,
-    status: session.status,
-    questionNumber: session.currentQuestionIndex + 1,
-    totalQuestions: questions.length,
-    question: serializeQuestion(question, options),
-    leaderboard: serializeLeaderboard(session.players),
-  };
-}
-
-function buildLeaderboardPayload(session) {
-  return {
-    sessionId: session.id,
-    pinCode: session.pinCode,
-    status: session.status,
-    questionNumber: session.currentQuestionIndex + 1,
-    totalQuestions: session.quiz?.questions?.length || 0,
-    leaderboard: serializeLeaderboard(session.players),
-  };
-}
-
+/**
+ * Проверяет права хоста на управление комнатой.
+ * @param {{ pinCode: string, sessionId: string, token: string }} params
+ * @returns {Promise<{ pinCode: string, sessionId: string, hostId: string }>}
+ */
 async function verifyHostRoomAccess({ pinCode, sessionId, token }) {
-  const safePinCode = String(pinCode || '').trim();
-  const safeSessionId = String(sessionId || '').trim();
-  const safeToken = String(token || '').trim();
+  const { prisma: db } = require('../config/prisma');
+  const { env } = require('../config/env');
+  const jwt = require('jsonwebtoken');
 
-  if (!safePinCode || !safeSessionId || !safeToken) {
-    throw createHttpError(401, 'Требуется авторизация ведущего');
-  }
+  if (!token) throw new Error('Токен авторизации обязателен');
 
   let decoded;
   try {
-    decoded = jwt.verify(safeToken, env.jwtSecret);
-  } catch (error) {
-    throw createHttpError(401, 'Недействительный токен ведущего');
+    decoded = jwt.verify(token, env.jwtSecret);
+  } catch {
+    throw new Error('Недействительный токен');
   }
 
-  if (!decoded?.userId) {
-    throw createHttpError(401, 'Недействительный токен ведущего');
+  const userId = decoded.id || decoded.userId || decoded.sub;
+  if (!userId) throw new Error('Недействительный токен');
+
+  let session;
+
+  if (pinCode) {
+    session = await prisma.gameSession.findUnique({ where: { pinCode } });
+  } else if (sessionId) {
+    session = await prisma.gameSession.findUnique({ where: { id: sessionId } });
   }
 
-  const session = await sessionRepository.gameSession.findUnique({
-    where: { id: safeSessionId },
-    select: {
-      id: true,
-      pinCode: true,
-      hostId: true,
-      status: true,
-    },
-  });
+  if (!session) throw new Error('Сессия не найдена');
+  if (session.hostId !== userId) throw new Error('Нет прав хоста для этой сессии');
 
-  const user = await sessionRepository.user.findUnique({
-    where: { id: decoded.userId },
-    select: {
-      id: true,
-      role: true,
-    },
-  });
-
-  if (!session || session.pinCode !== safePinCode) {
-    throw createHttpError(404, 'Сессия не найдена');
-  }
-
-  if (!user || (session.hostId !== user.id && user.role !== 'ADMIN')) {
-    throw createHttpError(403, 'Нет прав на управление этой сессией');
-  }
+  // Сохраняем hostSocketId в сессии (через отдельное поле или кэш)
+  // Используем временное хранилище в памяти (достаточно для single-instance)
+  hostSocketMap.set(session.pinCode, null); // будет обновлено после регистрации
 
   return {
-    sessionId: session.id,
     pinCode: session.pinCode,
-    hostId: session.hostId,
+    sessionId: session.id,
+    hostId: userId,
   };
 }
 
+/**
+ * Получает hostSocketId по pinCode из in-memory кэша.
+ * @param {string} pinCode
+ * @returns {Promise<string|null>}
+ */
+async function getHostSocketIdByPin(pinCode) {
+  return hostSocketMap.get(pinCode) || null;
+}
+
+/**
+ * Регистрирует socketId хоста для pinCode.
+ * @param {string} pinCode
+ * @param {string} socketId
+ */
+function registerHostSocket(pinCode, socketId) {
+  hostSocketMap.set(pinCode, socketId);
+}
+
+/**
+ * Удаляет запись хоста из кэша при отключении.
+ * @param {string} socketId
+ */
+function unregisterHostBySocketId(socketId) {
+  for (const [pin, sid] of hostSocketMap.entries()) {
+    if (sid === socketId) {
+      hostSocketMap.delete(pin);
+      break;
+    }
+  }
+}
+
+// In-memory хранилище socketId хостов (достаточно для single-instance деплоя)
+const hostSocketMap = new Map();
+
+// ─── Game Flow ───────────────────────────────────────────────────────────────
+
+/**
+ * Запускает игру по PIN-коду.
+ * @param {string} pinCode
+ * @returns {Promise<{ hostPayload: Object, playerPayload: Object }>}
+ */
 async function startGameByPin(pinCode) {
-  const session = await getFullSessionByPinOrThrow(pinCode);
-
-  if (!session.players.length) {
-    throw createHttpError(400, 'Нельзя начать игру без игроков');
-  }
-
-  if (!session.quiz.questions.length) {
-    throw createHttpError(400, 'В квизе нет вопросов');
-  }
-
-  const updated = await sessionRepository.gameSession.update({
-    where: { id: session.id },
-    data: {
-      status: SESSION_STATUSES.QUESTION,
-      startedAt: session.startedAt || new Date(),
-      currentQuestionIndex: 0,
-    },
-    include: {
-      quiz: {
-        include: {
-          questions: {
-            orderBy: { order: 'asc' },
-            include: {
-              answers: { orderBy: { order: 'asc' } },
-            },
-          },
-        },
-      },
-      players: {
-        orderBy: { createdAt: 'asc' },
-      },
-    },
-  });
-
-  return {
-    hostPayload: buildQuestionPayload(updated, { includeHostNotes: true }),
-    playerPayload: buildQuestionPayload(updated),
-  };
-}
-
-async function joinPlayer({ pinCode, nickname, socketId }) {
-  const normalizedNickname = String(nickname || '').trim();
-
-  if (!normalizedNickname) {
-    throw createHttpError(400, 'Имя игрока обязательно');
-  }
-
-  const session = await sessionRepository.gameSession.findUnique({
+  const session = await prisma.gameSession.findUnique({
     where: { pinCode },
     include: {
       quiz: {
-        select: {
-          allowReconnect: true,
-        },
-      },
-      players: {
-        orderBy: { createdAt: 'asc' },
-      },
-    },
-  });
-
-  if (!session) {
-    throw createHttpError(404, 'Игра не найдена');
-  }
-
-  if (session.status === SESSION_STATUSES.FINISHED) {
-    throw createHttpError(410, 'Игра уже завершена');
-  }
-
-  const existingPlayer = session.players.find(
-    (player) => player.nickname.trim().toLowerCase() === normalizedNickname.toLowerCase()
-  );
-
-  let player;
-
-  if (existingPlayer) {
-    if (!session.quiz.allowReconnect) {
-      throw createHttpError(400, 'Игрок с таким именем уже существует');
-    }
-
-    player = await sessionRepository.gamePlayer.update({
-      where: { id: existingPlayer.id },
-      data: {
-        connected: true,
-        socketId,
-      },
-    });
-  } else {
-    player = await sessionRepository.gamePlayer.create({
-      data: {
-        sessionId: session.id,
-        nickname: normalizedNickname,
-        socketId,
-        connected: true,
-      },
-    });
-  }
-
-  const freshSession = await sessionRepository.gameSession.findUnique({
-    where: { id: session.id },
-    include: {
-      players: {
-        orderBy: { createdAt: 'asc' },
-      },
-    },
-  });
-
-  return {
-    player,
-    lobby: buildLobbyPayload(freshSession),
-  };
-}
-
-async function disconnectPlayerBySocketId(socketId) {
-  if (!socketId) return;
-
-  const player = await sessionRepository.gamePlayer.findFirst({
-    where: { socketId },
-    select: { id: true },
-  });
-
-  if (!player) return;
-
-  await sessionRepository.gamePlayer.update({
-    where: { id: player.id },
-    data: {
-      connected: false,
-      socketId: null,
-    },
-  });
-}
-
-async function submitPlayerAnswer({
-  pinCode,
-  playerId,
-  questionId,
-  answerId = null,
-  answerText = null,
-  responseTimeMs = 0,
-}) {
-  const session = await getFullSessionByPinOrThrow(pinCode);
-  const question = session.quiz.questions[session.currentQuestionIndex];
-
-  if (!question) {
-    throw createHttpError(400, 'Нет активного вопроса');
-  }
-
-  if (session.status !== SESSION_STATUSES.QUESTION) {
-    throw createHttpError(400, 'Сейчас нельзя отвечать');
-  }
-
-  if (question.id !== questionId) {
-    throw createHttpError(400, 'Ответ относится не к текущему вопросу');
-  }
-
-  const player = await sessionRepository.gamePlayer.findUnique({
-    where: { id: playerId },
-  });
-
-  if (!player || player.sessionId !== session.id) {
-    throw createHttpError(404, 'Игрок не найден');
-  }
-
-  const existingAnswer = await sessionRepository.playerAnswer.findFirst({
-    where: {
-      playerId,
-      questionId,
-    },
-  });
-
-  if (existingAnswer) {
-    throw createHttpError(400, 'Ответ уже отправлен');
-  }
-
-  const correctAnswers = question.answers.filter((answer) => answer.isCorrect);
-  const correctAnswerIds = new Set(correctAnswers.map((answer) => answer.id));
-
-  let isCorrect = false;
-
-  if (answerId) {
-    isCorrect = correctAnswerIds.has(answerId);
-  } else if (answerText && question.type === 'TRUEFALSE') {
-    const normalizedText = String(answerText).trim().toLowerCase();
-    const correctTextSet = new Set(
-      correctAnswers.map((answer) => answer.text.trim().toLowerCase())
-    );
-    isCorrect = correctTextSet.has(normalizedText);
-  }
-
-  const safeResponseTime = Math.max(0, Number(responseTimeMs) || 0);
-  const awardedPoints = isCorrect ? question.points : 0;
-
-  await sessionRepository.transaction(async (tx) => {
-    await tx.playerAnswer.create({
-      data: {
-        playerId,
-        questionId,
-        answerId: answerId || null,
-        answerText: answerText ? String(answerText).trim() : null,
-        isCorrect,
-        pointsAwarded: awardedPoints,
-        responseTimeMs: safeResponseTime,
-      },
-    });
-
-    await tx.gamePlayer.update({
-      where: { id: playerId },
-      data: {
-        score: {
-          increment: awardedPoints,
-        },
-        correctAnswers: {
-          increment: isCorrect ? 1 : 0,
-        },
-      },
-    });
-  });
-
-  const updatedPlayer = await sessionRepository.gamePlayer.findUnique({
-    where: { id: playerId },
-  });
-
-  return {
-    playerId: updatedPlayer.id,
-    isCorrect,
-    pointsAwarded: awardedPoints,
-    score: updatedPlayer.score,
-    correctAnswerIds: Array.from(correctAnswerIds),
-  };
-}
-
-async function getCurrentAnswerRevealByPin(pinCode) {
-  const session = await getFullSessionByPinOrThrow(pinCode);
-  const question = session.quiz.questions[session.currentQuestionIndex];
-
-  if (!question) {
-    throw createHttpError(400, 'Нет текущего вопроса');
-  }
-
-  const answersStats = await sessionRepository.playerAnswer.findMany({
-    where: {
-      player: {
-        sessionId: session.id,
-      },
-      questionId: question.id,
-    },
-    select: {
-      answerId: true,
-      isCorrect: true,
-      playerId: true,
-    },
-  });
-
-  const countsByAnswerId = {};
-  for (const item of answersStats) {
-    if (!item.answerId) continue;
-    countsByAnswerId[item.answerId] = (countsByAnswerId[item.answerId] || 0) + 1;
-  }
-
-  const leaderboard = serializeLeaderboard(session.players);
-
-  await sessionRepository.gameSession.update({
-    where: { id: session.id },
-    data: {
-      status: SESSION_STATUSES.SHOW_ANSWER,
-    },
-  });
-
-  return {
-    sessionId: session.id,
-    pinCode: session.pinCode,
-    questionId: question.id,
-    correctAnswerIds: question.answers.filter((answer) => answer.isCorrect).map((answer) => answer.id),
-    correctAnswers: question.answers.filter((answer) => answer.isCorrect).map((answer) => ({
-      id: answer.id,
-      text: answer.text,
-    })),
-    answerStats: question.answers.map((answer) => ({
-      answerId: answer.id,
-      text: answer.text,
-      count: countsByAnswerId[answer.id] || 0,
-      isCorrect: answer.isCorrect,
-    })),
-    leaderboard,
-  };
-}
-
-async function pauseQuestionByPin(pinCode) {
-  const session = await getFullSessionByPinOrThrow(pinCode);
-  const question = session.quiz.questions[session.currentQuestionIndex];
-
-  if (!question) {
-    throw createHttpError(400, 'Нет активного вопроса');
-  }
-
-  if (session.status !== SESSION_STATUSES.QUESTION) {
-    throw createHttpError(400, 'Поставить на паузу можно только активный вопрос');
-  }
-
-  const updated = await sessionRepository.gameSession.update({
-    where: { id: session.id },
-    data: { status: SESSION_STATUSES.PAUSED },
-    include: {
-      quiz: {
         include: {
-          questions: {
-            orderBy: { order: 'asc' },
-            include: {
-              answers: { orderBy: { order: 'asc' } },
-            },
-          },
+          questions: { include: { answers: true }, orderBy: { order: 'asc' } },
         },
       },
-      players: {
-        orderBy: { createdAt: 'asc' },
-      },
     },
   });
 
-  return {
-    sessionId: updated.id,
-    pinCode: updated.pinCode,
-    status: updated.status,
-    questionId: question.id,
-    leaderboard: serializeLeaderboard(updated.players),
-  };
-}
+  if (!session) throw new Error('Сессия не найдена');
+  if (session.status !== 'LOBBY') throw new Error('Игра уже запущена');
 
-async function resumeQuestionByPin(pinCode) {
-  const session = await getFullSessionByPinOrThrow(pinCode);
-  const question = session.quiz.questions[session.currentQuestionIndex];
+  const questions = session.quiz.questions;
+  if (!questions.length) throw new Error('В квизе нет вопросов');
 
-  if (!question) {
-    throw createHttpError(400, 'Нет активного вопроса');
-  }
-
-  if (session.status !== SESSION_STATUSES.PAUSED) {
-    throw createHttpError(400, 'Продолжить можно только вопрос на паузе');
-  }
-
-  const updated = await sessionRepository.gameSession.update({
-    where: { id: session.id },
-    data: { status: SESSION_STATUSES.QUESTION },
-    include: {
-      quiz: {
-        include: {
-          questions: {
-            orderBy: { order: 'asc' },
-            include: {
-              answers: { orderBy: { order: 'asc' } },
-            },
-          },
-        },
-      },
-      players: {
-        orderBy: { createdAt: 'asc' },
-      },
-    },
+  await prisma.gameSession.update({
+    where: { pinCode },
+    data: { status: 'QUESTION', currentQuestionIndex: 0, startedAt: new Date() },
   });
 
-  return {
-    sessionId: updated.id,
-    pinCode: updated.pinCode,
-    status: updated.status,
-    questionId: question.id,
-    leaderboard: serializeLeaderboard(updated.players),
-  };
+  return buildQuestionPayload(questions[0]);
 }
 
-async function showLeaderboardByPin(pinCode) {
-  const session = await getFullSessionByPinOrThrow(pinCode);
-
-  if (session.status === SESSION_STATUSES.FINISHED) {
-    throw createHttpError(400, 'Игра уже завершена');
-  }
-
-  const updated = await sessionRepository.gameSession.update({
-    where: { id: session.id },
-    data: { status: SESSION_STATUSES.LEADERBOARD },
-    include: {
-      quiz: {
-        include: {
-          questions: {
-            orderBy: { order: 'asc' },
-            include: {
-              answers: { orderBy: { order: 'asc' } },
-            },
-          },
-        },
-      },
-      players: {
-        orderBy: { score: 'desc' },
-      },
-    },
-  });
-
-  return buildLeaderboardPayload(updated);
-}
-
-async function adjustPlayerScoreByPin({ pinCode, playerId, delta }) {
-  const safeDelta = Number(delta);
-
-  if (!Number.isInteger(safeDelta) || safeDelta === 0 || Math.abs(safeDelta) > 100000) {
-    throw createHttpError(400, 'Некорректное изменение очков');
-  }
-
-  const session = await getFullSessionByPinOrThrow(pinCode);
-  const player = session.players.find((item) => item.id === playerId);
-
-  if (!player) {
-    throw createHttpError(404, 'Игрок не найден в этой сессии');
-  }
-
-  await sessionRepository.gamePlayer.update({
-    where: { id: player.id },
-    data: {
-      score: {
-        increment: safeDelta,
-      },
-    },
-  });
-
-  const updated = await getFullSessionByPinOrThrow(pinCode);
-
-  return buildLeaderboardPayload(updated);
-}
-
+/**
+ * Переходит к следующему вопросу.
+ * @param {string} pinCode
+ * @returns {Promise<Object>}
+ */
 async function goToNextQuestionByPin(pinCode) {
-  const session = await getFullSessionByPinOrThrow(pinCode);
-  const nextIndex = session.currentQuestionIndex + 1;
-  const totalQuestions = session.quiz.questions.length;
+  const session = await prisma.gameSession.findUnique({
+    where: { pinCode },
+    include: {
+      quiz: {
+        include: {
+          questions: { include: { answers: true }, orderBy: { order: 'asc' } },
+        },
+      },
+      players: true,
+    },
+  });
 
-  if (nextIndex >= totalQuestions) {
+  if (!session) throw new Error('Сессия не найдена');
+
+  const questions = session.quiz.questions;
+  const nextIndex = session.currentQuestionIndex + 1;
+
+  if (nextIndex >= questions.length) {
     return finishSessionByPin(pinCode);
   }
 
-  const updated = await sessionRepository.gameSession.update({
-    where: { id: session.id },
-    data: {
-      status: SESSION_STATUSES.QUESTION,
-      currentQuestionIndex: nextIndex,
-    },
-    include: {
-      quiz: {
-        include: {
-          questions: {
-            orderBy: { order: 'asc' },
-            include: {
-              answers: {
-                orderBy: { order: 'asc' },
-              },
-            },
-          },
-        },
-      },
-      players: {
-        orderBy: { createdAt: 'asc' },
-      },
-    },
+  await prisma.gameSession.update({
+    where: { pinCode },
+    data: { status: 'QUESTION', currentQuestionIndex: nextIndex },
   });
 
-  return {
-    finished: false,
-    hostPayload: buildQuestionPayload(updated, { includeHostNotes: true }),
-    playerPayload: buildQuestionPayload(updated),
-  };
+  return buildQuestionPayload(questions[nextIndex]);
 }
 
+/**
+ * Завершает сессию.
+ * @param {string} pinCode
+ * @returns {Promise<{ finished: true, payload: Object }>}
+ */
 async function finishSessionByPin(pinCode) {
-  const session = await getFullSessionByPinOrThrow(pinCode);
-
-  const updated = await sessionRepository.gameSession.update({
-    where: { id: session.id },
-    data: {
-      status: SESSION_STATUSES.FINISHED,
-      finishedAt: new Date(),
-    },
-    include: {
-      players: {
-        orderBy: { score: 'desc' },
-      },
-      quiz: {
-        select: {
-          id: true,
-          title: true,
-        },
-      },
-    },
+  const session = await prisma.gameSession.findUnique({
+    where: { pinCode },
+    include: { players: true },
   });
+
+  if (!session) throw new Error('Сессия не найдена');
+
+  await prisma.gameSession.update({
+    where: { pinCode },
+    data: { status: 'FINISHED', finishedAt: new Date() },
+  });
+
+  const leaderboard = buildLeaderboardPayload(session.players);
 
   return {
     finished: true,
     payload: {
-      sessionId: updated.id,
-      pinCode: updated.pinCode,
-      quiz: updated.quiz,
-      leaderboard: serializeLeaderboard(updated.players),
+      ...leaderboard,
+      sessionId: session.id,
+      pinCode: session.pinCode,
     },
   };
+}
+
+/**
+ * Показывает правильный ответ на текущий вопрос.
+ * @param {string} pinCode
+ * @returns {Promise<Object>}
+ */
+async function getCurrentAnswerRevealByPin(pinCode) {
+  const session = await prisma.gameSession.findUnique({
+    where: { pinCode },
+    include: {
+      quiz: {
+        include: {
+          questions: { include: { answers: true }, orderBy: { order: 'asc' } },
+        },
+      },
+    },
+  });
+
+  if (!session) throw new Error('Сессия не найдена');
+
+  const question = session.quiz.questions[session.currentQuestionIndex];
+  if (!question) throw new Error('Вопрос не найден');
+
+  await prisma.gameSession.update({
+    where: { pinCode },
+    data: { status: 'SHOW_ANSWER' },
+  });
+
+  return {
+    questionId: question.id,
+    answers: question.answers.map((a) => ({
+      id: a.id,
+      text: a.text,
+      isCorrect: a.isCorrect,
+      order: a.order,
+    })),
+  };
+}
+
+/**
+ * Ставит вопрос на паузу.
+ * @param {string} pinCode
+ * @returns {Promise<Object>}
+ */
+async function pauseQuestionByPin(pinCode) {
+  const session = await prisma.gameSession.findUnique({ where: { pinCode } });
+  if (!session) throw new Error('Сессия не найдена');
+
+  await prisma.gameSession.update({
+    where: { pinCode },
+    data: { status: 'PAUSED' },
+  });
+
+  return { pinCode, status: 'PAUSED' };
+}
+
+/**
+ * Возобновляет вопрос после паузы.
+ * @param {string} pinCode
+ * @returns {Promise<Object>}
+ */
+async function resumeQuestionByPin(pinCode) {
+  const session = await prisma.gameSession.findUnique({ where: { pinCode } });
+  if (!session) throw new Error('Сессия не найдена');
+
+  await prisma.gameSession.update({
+    where: { pinCode },
+    data: { status: 'QUESTION' },
+  });
+
+  return { pinCode, status: 'QUESTION' };
+}
+
+/**
+ * Показывает таблицу лидеров.
+ * @param {string} pinCode
+ * @returns {Promise<Object>}
+ */
+async function showLeaderboardByPin(pinCode) {
+  const session = await prisma.gameSession.findUnique({
+    where: { pinCode },
+    include: { players: true },
+  });
+
+  if (!session) throw new Error('Сессия не найдена');
+
+  await prisma.gameSession.update({
+    where: { pinCode },
+    data: { status: 'LEADERBOARD' },
+  });
+
+  return buildLeaderboardPayload(session.players);
+}
+
+/**
+ * Корректирует очки игрока.
+ * @param {{ pinCode: string, playerId: string, delta: number }} params
+ * @returns {Promise<Object>}
+ */
+async function adjustPlayerScoreByPin({ pinCode, playerId, delta }) {
+  const session = await prisma.gameSession.findUnique({
+    where: { pinCode },
+    include: { players: true },
+  });
+
+  if (!session) throw new Error('Сессия не найдена');
+
+  const player = session.players.find((p) => p.id === playerId);
+  if (!player) throw new Error('Игрок не найден');
+
+  const newScore = Math.max(0, player.score + (Number(delta) || 0));
+
+  await prisma.gamePlayer.update({
+    where: { id: playerId },
+    data: { score: newScore },
+  });
+
+  const updatedPlayers = session.players.map((p) =>
+    p.id === playerId ? { ...p, score: newScore } : p
+  );
+
+  return buildLeaderboardPayload(updatedPlayers);
+}
+
+// ─── Player Socket Methods ───────────────────────────────────────────────────
+
+/**
+ * Подключает игрока к сессии.
+ * @param {{ pinCode: string, nickname: string, socketId: string }} params
+ * @returns {Promise<{ player: Object, lobby: Object }>}
+ */
+async function joinPlayer({ pinCode, nickname, socketId }) {
+  if (!pinCode) throw new Error('PIN-код обязателен');
+  if (!nickname) throw new Error('Никнейм обязателен');
+
+  const session = await prisma.gameSession.findUnique({
+    where: { pinCode },
+    include: { players: true },
+  });
+
+  if (!session) throw new Error('Сессия не найдена');
+  if (session.status !== 'LOBBY') throw new Error('Игра уже началась');
+
+  const existing = session.players.find(
+    (p) => p.nickname.toLowerCase() === nickname.toLowerCase()
+  );
+
+  if (existing) throw new Error('Никнейм уже занят');
+
+  const player = await prisma.gamePlayer.create({
+    data: {
+      sessionId: session.id,
+      nickname,
+      socketId,
+      score: 0,
+      correctAnswers: 0,
+      connected: true,
+    },
+  });
+
+  const updatedSession = await prisma.gameSession.findUnique({
+    where: { pinCode },
+    include: { players: true },
+  });
+
+  return {
+    player: {
+      id: player.id,
+      nickname: player.nickname,
+      score: player.score,
+    },
+    lobby: buildLobbyPayload(updatedSession),
+  };
+}
+
+/**
+ * Принимает ответ игрока.
+ * @param {{ pinCode: string, playerId: string, questionId: string, answerId: string|null, answerText: string|null, responseTimeMs: number }} params
+ * @returns {Promise<Object>}
+ */
+async function submitPlayerAnswer({
+  pinCode,
+  playerId,
+  questionId,
+  answerId,
+  answerText,
+  responseTimeMs,
+}) {
+  const session = await prisma.gameSession.findUnique({
+    where: { pinCode },
+    include: {
+      quiz: {
+        include: {
+          questions: { include: { answers: true } },
+        },
+      },
+    },
+  });
+
+  if (!session) throw new Error('Сессия не найдена');
+  if (session.status !== 'QUESTION') throw new Error('Сейчас не время для ответов');
+
+  const question = session.quiz.questions.find((q) => q.id === questionId);
+  if (!question) throw new Error('Вопрос не найден');
+
+  const existing = await prisma.playerAnswer.findFirst({
+    where: { playerId, questionId },
+  });
+
+  if (existing) throw new Error('Ответ уже отправлен');
+
+  let isCorrect = false;
+  let pointsAwarded = 0;
+
+  if (answerId) {
+    const answer = question.answers.find((a) => a.id === answerId);
+    isCorrect = answer?.isCorrect ?? false;
+  } else if (answerText && question.type === 'TEXT') {
+    const correctAnswer = question.answers.find((a) => a.isCorrect);
+    isCorrect = correctAnswer
+      ? correctAnswer.text.toLowerCase().trim() === answerText.toLowerCase().trim()
+      : false;
+  }
+
+  if (isCorrect) {
+    pointsAwarded = question.points || 100;
+  }
+
+  await prisma.playerAnswer.create({
+    data: {
+      playerId,
+      questionId,
+      answerId: answerId || null,
+      answerText: answerText || null,
+      isCorrect,
+      pointsAwarded,
+      responseTimeMs: responseTimeMs || 0,
+    },
+  });
+
+  if (isCorrect) {
+    await prisma.gamePlayer.update({
+      where: { id: playerId },
+      data: {
+        score: { increment: pointsAwarded },
+        correctAnswers: { increment: 1 },
+      },
+    });
+  }
+
+  return {
+    isCorrect,
+    pointsAwarded,
+    questionId,
+  };
+}
+
+/**
+ * Обрабатывает отключение игрока по socketId.
+ * @param {string} socketId
+ * @returns {Promise<void>}
+ */
+async function disconnectPlayerBySocketId(socketId) {
+  if (!socketId) return;
+
+  await prisma.gamePlayer.updateMany({
+    where: { socketId },
+    data: { connected: false },
+  });
+
+  unregisterHostBySocketId(socketId);
 }
 
 module.exports = {
@@ -842,17 +626,18 @@ module.exports = {
   getSessionByPin,
   getSessionById,
   verifyHostRoomAccess,
+  getHostSocketIdByPin,
+  registerHostSocket,
+  unregisterHostBySocketId,
   startGameByPin,
-  joinPlayer,
-  disconnectPlayerBySocketId,
-  submitPlayerAnswer,
+  goToNextQuestionByPin,
+  finishSessionByPin,
   getCurrentAnswerRevealByPin,
   pauseQuestionByPin,
   resumeQuestionByPin,
   showLeaderboardByPin,
   adjustPlayerScoreByPin,
-  goToNextQuestionByPin,
-  finishSessionByPin,
-  buildLobbyPayload,
-  SESSION_STATUSES,
+  joinPlayer,
+  submitPlayerAnswer,
+  disconnectPlayerBySocketId,
 };
