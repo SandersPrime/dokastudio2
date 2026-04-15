@@ -3,6 +3,8 @@
 // Рендер селектора типов вопросов
 function renderQuestionTypeSelector() {
     const container = document.getElementById('questionTypeSelector');
+    if (!container) return;
+    
     const types = QuestionTypeFactory.getAllTypes();
     
     container.innerHTML = types.map(t => `
@@ -12,113 +14,11 @@ function renderQuestionTypeSelector() {
     `).join('');
 }
 
-// Рендер панели расширенных настроек
-function renderAdvancedSettingsPanel() {
-    const container = document.getElementById('advancedSettingsContainer');
-    
-    container.innerHTML = `
-        <div id="advancedSettingsPanel" style="display: none;" class="card-pill mt-3">
-            <h4 style="margin-bottom: 16px;">⚙️ Расширенные настройки вопроса</h4>
-            
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">🎯 Очки в начале</label>
-                    <input type="number" class="input" id="pointsAtStart" value="100" min="0">
-                    <small class="text-muted">Очки при мгновенном ответе</small>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">⏱️ Очки в конце</label>
-                    <input type="number" class="input" id="pointsAtEnd" value="100" min="0">
-                    <small class="text-muted">Очки в последнюю секунду</small>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">❌ Штраф за ошибку</label>
-                    <input type="number" class="input" id="penaltyPoints" value="0" min="0">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">⏸️ Штраф за пропуск</label>
-                    <input type="number" class="input" id="penaltyNoAnswer" value="0" min="0">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">🏆 Бонусы за скорость</label>
-                <div class="d-flex gap-2">
-                    <input type="number" class="input" id="speedBonus1" placeholder="🥇 1 место" value="0" min="0">
-                    <input type="number" class="input" id="speedBonus2" placeholder="🥈 2 место" value="0" min="0">
-                    <input type="number" class="input" id="speedBonus3" placeholder="🥉 3 место" value="0" min="0">
-                </div>
-            </div>
-            
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-checkbox">
-                        <input type="checkbox" id="autoJudge" checked> 🤖 Автоматическое судейство
-                    </label>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-checkbox">
-                        <input type="checkbox" id="lockoutOnWrong" checked> 🔒 Блокировать после ошибки
-                    </label>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-checkbox">
-                        <input type="checkbox" id="showCorrectAnswer" checked> ✅ Показывать правильный ответ
-                    </label>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-checkbox">
-                        <input type="checkbox" id="jokersEnabled" checked> 🃏 Джокеры разрешены
-                    </label>
-                </div>
-            </div>
-            
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">⏲️ Режим таймера</label>
-                    <select class="input" id="countdownMode">
-                        <option value="auto">Автоматический</option>
-                        <option value="manual">Ручной</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">✨ Анимация текста</label>
-                    <select class="input" id="textReveal">
-                        <option value="none">Без анимации</option>
-                        <option value="letter">По буквам</option>
-                        <option value="word">По словам</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">👥 Демографическая группа</label>
-                <input type="text" class="input" id="demographicGroup" placeholder="Например: Мужчины">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">🔀 Ветвление (Slide Routing)</label>
-                <input type="text" class="input" id="slideRouting" placeholder="ID следующего слайда">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">📝 Заметки для ведущего</label>
-                <textarea class="input" id="questionNotes" rows="2" placeholder="Подсказки, факты..."></textarea>
-            </div>
-        </div>
-    `;
-}
-
 // Рендер секции загрузки медиа
 function renderMediaUploadSection() {
     const container = document.getElementById('mediaUploadSection');
+    if (!container) return;
+    
     container.innerHTML = `
         <div class="media-upload-area" id="mediaUploadArea" onclick="document.getElementById('mediaFile').click()">
             <p id="uploadPlaceholder">📁 Нажмите или перетащите файл</p>
@@ -131,6 +31,8 @@ function renderMediaUploadSection() {
 // Рендер секции ответов
 function renderAnswersSection() {
     const container = document.getElementById('answersSection');
+    if (!container) return;
+    
     container.innerHTML = `
         <div class="d-flex justify-between items-center mb-2">
             <label class="form-label">Варианты ответов</label>
@@ -143,6 +45,8 @@ function renderAnswersSection() {
 // Рендер секции Правда/Ложь
 function renderTrueFalseSection() {
     const container = document.getElementById('trueFalseSection');
+    if (!container) return;
+    
     container.innerHTML = `
         <div class="form-group">
             <label class="form-label">Правильный ответ</label>
@@ -154,9 +58,68 @@ function renderTrueFalseSection() {
     `;
 }
 
+// Загрузка расширенных настроек в форму (поля уже есть в HTML)
+function loadAdvancedSettings(question) {
+    const fields = ['pointsAtStart', 'pointsAtEnd', 'penaltyPoints', 'penaltyNoAnswer', 
+                    'speedBonus1', 'speedBonus2', 'speedBonus3', 'countdownMode', 'textReveal',
+                    'demographicGroup', 'slideRouting', 'questionNotes'];
+    
+    fields.forEach(field => {
+        const el = document.getElementById(field);
+        if (el) {
+            if (field === 'countdownMode') el.value = question.countdownMode ?? 'auto';
+            else if (field === 'textReveal') el.value = question.textReveal ?? 'none';
+            else if (field === 'demographicGroup') el.value = question.demographicGroup || '';
+            else if (field === 'slideRouting') el.value = question.slideRouting || '';
+            else if (field === 'questionNotes') el.value = question.notes || '';
+            else if (field.startsWith('speedBonus')) {
+                const num = field.replace('speedBonus', '');
+                el.value = question[`speedBonus${num}`] ?? 0;
+            } else {
+                el.value = question[field] ?? (field.includes('Points') ? 100 : 0);
+            }
+        }
+    });
+    
+    // Чекбоксы
+    const checkboxes = ['autoJudge', 'lockoutOnWrong', 'showCorrectAnswer', 'jokersEnabled'];
+    checkboxes.forEach(cb => {
+        const el = document.getElementById(cb);
+        if (el) el.checked = question[cb] ?? true;
+    });
+}
+
+// Сохранение расширенных настроек из формы в объект вопроса
+function saveAdvancedSettings(question) {
+    // Числовые поля
+    question.pointsAtStart = parseInt(document.getElementById('pointsAtStart')?.value) || 100;
+    question.pointsAtEnd = parseInt(document.getElementById('pointsAtEnd')?.value) || 100;
+    question.penaltyPoints = parseInt(document.getElementById('penaltyPoints')?.value) || 0;
+    question.penaltyNoAnswer = parseInt(document.getElementById('penaltyNoAnswer')?.value) || 0;
+    question.speedBonus1 = parseInt(document.getElementById('speedBonus1')?.value) || 0;
+    question.speedBonus2 = parseInt(document.getElementById('speedBonus2')?.value) || 0;
+    question.speedBonus3 = parseInt(document.getElementById('speedBonus3')?.value) || 0;
+    
+    // Чекбоксы
+    question.autoJudge = document.getElementById('autoJudge')?.checked ?? true;
+    question.lockoutOnWrong = document.getElementById('lockoutOnWrong')?.checked ?? true;
+    question.showCorrectAnswer = document.getElementById('showCorrectAnswer')?.checked ?? true;
+    question.jokersEnabled = document.getElementById('jokersEnabled')?.checked ?? true;
+    
+    // Селекты
+    question.countdownMode = document.getElementById('countdownMode')?.value || 'auto';
+    question.textReveal = document.getElementById('textReveal')?.value || 'none';
+    
+    // Текстовые поля
+    question.demographicGroup = document.getElementById('demographicGroup')?.value || null;
+    question.slideRouting = document.getElementById('slideRouting')?.value || null;
+    question.notes = document.getElementById('questionNotes')?.value || null;
+    
+    return question;
+}
+
 // Инициализация UI-компонентов
 function initConstructorUI() {
-    renderAdvancedSettingsPanel();
     renderMediaUploadSection();
     renderAnswersSection();
     renderTrueFalseSection();
@@ -165,9 +128,10 @@ function initConstructorUI() {
 // Вызываем при загрузке
 document.addEventListener('DOMContentLoaded', initConstructorUI);
 
-// Экспорт функций
+// Экспорт функций в глобальную область
 window.renderQuestionTypeSelector = renderQuestionTypeSelector;
-window.toggleAdvancedSettings = () => {
-    const panel = document.getElementById('advancedSettingsPanel');
-    if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-};
+window.loadAdvancedSettings = loadAdvancedSettings;
+window.saveAdvancedSettings = saveAdvancedSettings;
+window.renderMediaUploadSection = renderMediaUploadSection;
+window.renderAnswersSection = renderAnswersSection;
+window.renderTrueFalseSection = renderTrueFalseSection;

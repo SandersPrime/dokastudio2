@@ -82,51 +82,146 @@
                 </div>
 
                 <!-- ПРАВАЯ КОЛОНКА -->
-                <div class="question-editor" id="questionEditor">
-                    <div class="editor-placeholder" id="editorPlaceholder">
-                        <p>👈 Выберите вопрос из списка или создайте новый</p>
-                    </div>
-                    <div id="editorContent" style="display: none;">
-                        <div class="d-flex justify-between items-center mb-3">
-                            <h3>Редактирование вопроса</h3>
-                            <button class="btn btn-outline btn-sm" onclick="deleteCurrentQuestion()">🗑️ Удалить</button>
-                        </div>
-                        
-                        <div class="type-selector" id="questionTypeSelector"></div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Вопрос</label>
-                            <textarea class="input" id="questionText" rows="3"></textarea>
-                        </div>
-                        
-                        <div id="mediaUploadSection"></div>
-                        
-                        <div class="d-flex gap-3 mt-3">
-                            <div class="form-group">
-                                <label class="form-label">Баллы</label>
-                                <input type="number" class="input" id="questionPoints" value="100" style="width: 120px;">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Время (сек)</label>
-                                <input type="number" class="input" id="questionTime" value="30" style="width: 120px;">
-                            </div>
-                        </div>
-                        
-                        <div id="answersSection"></div>
-                        <div id="trueFalseSection"></div>
-                        
-                        <button class="btn btn-outline btn-sm w-full mt-3" onclick="toggleAdvancedSettings()">
-                            <span>⚙️</span> Расширенные настройки
-                        </button>
-                        
-                        <div id="advancedSettingsContainer"></div>
-                        
-                        <div class="d-flex gap-2 mt-4">
-                            <button class="btn btn-primary" onclick="saveCurrentQuestion()">💾 Сохранить</button>
-                            <button class="btn btn-outline" onclick="cancelEdit()">✖️ Отмена</button>
-                        </div>
-                    </div>
+<div class="question-editor" id="questionEditor">
+    <div class="editor-placeholder" id="editorPlaceholder">
+        <p>👈 Выберите вопрос из списка или создайте новый</p>
+    </div>
+    <div id="editorContent" style="display: none;">
+        <div class="d-flex justify-between items-center mb-3">
+            <h3>Редактирование вопроса</h3>
+            <button class="btn btn-outline btn-sm" onclick="deleteCurrentQuestion()">🗑️ Удалить</button>
+        </div>
+        
+        <!-- Тип вопроса -->
+        <div class="type-selector" id="questionTypeSelector"></div>
+        
+        <!-- Текст вопроса -->
+        <div class="form-group">
+            <label class="form-label">Вопрос</label>
+            <textarea class="input" id="questionText" rows="3"></textarea>
+        </div>
+        
+        <!-- Медиа-загрузка -->
+        <div id="mediaUploadSection"></div>
+        
+        <!-- Базовые настройки: Баллы и Время -->
+        <div class="d-flex gap-3 mt-3">
+            <div class="form-group">
+                <label class="form-label">Баллы</label>
+                <input type="number" class="input" id="questionPoints" value="100" style="width: 120px;">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Время (сек)</label>
+                <input type="number" class="input" id="questionTime" value="30" style="width: 120px;">
+            </div>
+        </div>
+        
+        <!-- Ответы или Правда/Ложь -->
+        <div id="answersSection"></div>
+        <div id="trueFalseSection"></div>
+        
+        <!-- РАСШИРЕННЫЕ НАСТРОЙКИ (всегда видны) -->
+        <div class="advanced-settings-section mt-4">
+            <h4 style="margin-bottom: 16px; color: var(--text-primary); font-size: 1.1rem;">⚙️ Расширенные настройки вопроса</h4>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">🎯 Очки в начале</label>
+                    <input type="number" class="input" id="pointsAtStart" value="100" min="0">
+                    <small class="text-muted">Очки при мгновенном ответе</small>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">⏱️ Очки в конце</label>
+                    <input type="number" class="input" id="pointsAtEnd" value="100" min="0">
+                    <small class="text-muted">Очки в последнюю секунду</small>
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">❌ Штраф за ошибку</label>
+                    <input type="number" class="input" id="penaltyPoints" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">⏸️ Штраф за пропуск</label>
+                    <input type="number" class="input" id="penaltyNoAnswer" value="0" min="0">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">🏆 Бонусы за скорость</label>
+                <div class="d-flex gap-2">
+                    <input type="number" class="input" id="speedBonus1" placeholder="🥇 1 место" value="0" min="0">
+                    <input type="number" class="input" id="speedBonus2" placeholder="🥈 2 место" value="0" min="0">
+                    <input type="number" class="input" id="speedBonus3" placeholder="🥉 3 место" value="0" min="0">
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="autoJudge" checked> 🤖 Автоматическое судейство
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="lockoutOnWrong" checked> 🔒 Блокировать после ошибки
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="showCorrectAnswer" checked> ✅ Показывать правильный ответ
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="jokersEnabled" checked> 🃏 Джокеры разрешены
+                    </label>
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">⏲️ Режим таймера</label>
+                    <select class="input" id="countdownMode">
+                        <option value="auto">Автоматический</option>
+                        <option value="manual">Ручной</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">✨ Анимация текста</label>
+                    <select class="input" id="textReveal">
+                        <option value="none">Без анимации</option>
+                        <option value="letter">По буквам</option>
+                        <option value="word">По словам</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">👥 Демографическая группа</label>
+                    <input type="text" class="input" id="demographicGroup" placeholder="Например: Мужчины">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">🔀 Ветвление (Slide ID)</label>
+                    <input type="text" class="input" id="slideRouting" placeholder="ID следующего слайда">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">📝 Заметки для ведущего</label>
+                <textarea class="input" id="questionNotes" rows="2" placeholder="Подсказки, интересные факты..."></textarea>
+            </div>
+        </div>
+        
+        <!-- Кнопки сохранения -->
+        <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-primary" onclick="saveCurrentQuestion()">💾 Сохранить</button>
+            <button class="btn btn-outline" onclick="cancelEdit()">✖️ Отмена</button>
+        </div>
+    </div>
+</div>
             </div>
         </div>
     </div>
@@ -210,12 +305,12 @@
         };
 
         document.addEventListener('DOMContentLoaded', async function() {
-            Navigation.render('app-navigation', { currentPage: 'constructor' });
-            Modals.render('modalsContainer');
-            
-            if (typeof renderQuestionTypeSelector === 'function') {
-                renderQuestionTypeSelector();
-            }
+    Navigation.render('app-navigation', { currentPage: 'constructor' });
+    Modals.render('modalsContainer');
+    
+    if (typeof renderQuestionTypeSelector === 'function') {
+        renderQuestionTypeSelector();
+    }
             if (typeof renderMediaUploadSection === 'function') {
                 renderMediaUploadSection();
             }
@@ -229,19 +324,19 @@
                 renderAdvancedSettingsPanel();
             }
             
-            if (getToken()) {
-                const isAuth = await checkAuth();
-                if (isAuth && currentUser) {
-                    document.getElementById('authSection').style.display = 'none';
-                    document.getElementById('appSection').style.display = 'block';
-                    document.getElementById('logoutBtn').style.display = 'inline-block';
-                    Navigation.updateUser(currentUser.name, getUserInitials());
-                    if (typeof initConstructor === 'function') {
-                        initConstructor();
-                    }
-                }
+           if (getToken()) {
+        const isAuth = await checkAuth();
+        if (isAuth && currentUser) {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('appSection').style.display = 'block';
+            document.getElementById('logoutBtn').style.display = 'inline-block';
+            Navigation.updateUser(currentUser.name, getUserInitials());
+            if (typeof initConstructor === 'function') {
+                initConstructor();
             }
-        });
+        }
+    }
+});
     </script>
 </body>
 </html>

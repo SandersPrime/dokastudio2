@@ -292,3 +292,59 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Расширенные настройки */
+.advanced-settings-section {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-top: 24px;
+    border: 1px solid var(--border-light);
+}
+
+.advanced-settings-section h4 {
+    margin-bottom: 20px;
+    color: var(--text-primary);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.advanced-settings-section .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.advanced-settings-section .form-group {
+    margin-bottom: 16px;
+}
+
+.advanced-settings-section small {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.advanced-settings-section .form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.advanced-settings-section .form-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+@media (max-width: 600px) {
+    .advanced-settings-section .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}

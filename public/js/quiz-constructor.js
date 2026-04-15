@@ -250,7 +250,146 @@ function editQuestion(index) {
         renderAnswersEditor(question.answers || []);
     }
 }
+// ============================================
+// РЕДАКТОР ОТВЕТОВ
+// ============================================
 
+function renderAnswersEditor(answers) {
+    const container = document.getElementById('answersEditor');
+    if (!container) return;
+    
+    if (!answers || answers.length === 0) {
+        answers = [
+            { text: 'Правильный ответ', isCorrect: true },
+            { text: 'Неправильный ответ', isCorrect: false }
+        ];
+    }
+    
+    container.innerHTML = answers.map((a, idx) => `
+        <div class="answer-row">
+            <input type="radio" name="correctAnswer" ${a.isCorrect ? 'checked' : ''} 
+                   onchange="setCorrectAnswer(${idx})" title="Отметить как правильный">
+            <input type="text" class="input" placeholder="Текст ответа" 
+                   value="${escapeHtml(a.text || '')}"
+                   onchange="updateAnswerText(${idx}, this.value)">
+            <div class="answer-remove" onclick="removeAnswer(${idx})" title="Удалить ответ">🗑️</div>
+        </div>
+    `).join('');
+}
+
+function setCorrectAnswer(index) {
+    if (currentQuestionIndex < 0) return;
+    
+    const question = questions[currentQuestionIndex];
+    if (!question.answers) question.answers = [];
+    
+    question.answers.forEach((a, i) => a.isCorrect = (i === index));
+    renderAnswersEditor(question.answers);
+}
+
+function updateAnswerText(index, value) {
+    if (currentQuestionIndex < 0) return;
+    
+    const question = questions[currentQuestionIndex];
+    if (!question.answers) question.answers = [];
+    if (!question.answers[index]) question.answers[index] = { text: '', isCorrect: false };
+    
+    question.answers[index].text = value;
+}
+
+function addAnswer() {
+    if (currentQuestionIndex < 0) return;
+    
+    const question = questions[currentQuestionIndex];
+    if (!question.answers) question.answers = [];
+    
+    question.answers.push({ text: '', isCorrect: false });
+    renderAnswersEditor(question.answers);
+}
+
+function removeAnswer(index) {
+    if (currentQuestionIndex < 0) return;
+    
+    const question = questions[currentQuestionIndex];
+    if (!question.answers) return;
+    
+    if (question.answers.length <= 2) {
+        showToast('Должно быть минимум 2 ответа', 'error');
+        return;
+    }
+    
+    const wasCorrect = question.answers[index]?.isCorrect;
+    question.answers.splice(index, 1);
+    
+    if (wasCorrect && question.answers.length > 0) {
+        question.answers[0].isCorrect = true;
+    }
+    
+    renderAnswersEditor(question.answers);
+}
+
+// ============================================
+// ЗАГРУЗКА МЕДИА
+// ============================================
+
+async function uploadMedia(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+    if (uploadPlaceholder) uploadPlaceholder.textContent = '⏳ Загрузка...';
+    
+    try {
+        const response = await UploadAPI.uploadFile(file);
+        
+        if (response.url && currentQuestionIndex >= 0) {
+            questions[currentQuestionIndex].imageUrl = response.url;
+            showMediaPreview(response.url, questions[currentQuestionIndex].type);
+            
+            if (uploadPlaceholder) uploadPlaceholder.textContent = '✅ Файл загружен';
+            document.getElementById('mediaUploadArea')?.classList.add('has-file');
+            showToast('Файл загружен', 'success');
+        } else {
+            if (uploadPlaceholder) uploadPlaceholder.textContent = '📁 Нажмите или перетащите файл';
+            showToast(response.error || 'Ошибка загрузки', 'error');
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        if (uploadPlaceholder) uploadPlaceholder.textContent = '📁 Нажмите или перетащите файл';
+        showToast('Ошибка загрузки файла', 'error');
+    }
+    
+    event.target.value = '';
+}
+
+function showMediaPreview(url, type) {
+    const preview = document.getElementById('mediaPreview');
+    if (!preview) return;
+    
+    const typeHandler = QuestionTypeFactory.getType(type);
+    
+    if (typeHandler.mediaType === 'image') {
+        preview.innerHTML = `<img src="${url}" alt="Preview" style="max-width:100%; border-radius:8px; cursor:pointer;" onclick="window.open('${url}')">`;
+    } else if (typeHandler.mediaType === 'audio') {
+        preview.innerHTML = `<audio controls src="${url}" style="width:100%;"></audio>`;
+    } else if (typeHandler.mediaType === 'video') {
+        preview.innerHTML = `<video controls src="${url}" style="max-width:100%; border-radius:8px;"></video>`;
+    } else {
+        preview.innerHTML = '';
+    }
+}
+
+// ============================================
+// ЭКСПОРТ ФУНКЦИЙ
+// ============================================
+
+window.renderAnswersEditor = renderAnswersEditor;
+window.setCorrectAnswer = setCorrectAnswer;
+window.updateAnswerText = updateAnswerText;
+window.addAnswer = addAnswer;
+window.removeAnswer = removeAnswer;
+window.uploadMedia = uploadMedia;
+window.showMediaPreview = showMediaPreview;
 // Экспорт
 window.initConstructor = initConstructor;
 window.createQuiz = async () => {
