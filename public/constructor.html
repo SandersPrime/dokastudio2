@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio — Конструктор квизов</title>
+    
+    <!-- Шрифты -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    
+    <!-- Стили -->
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/constructor.css">
+    
+    <!-- Библиотеки -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- НАВИГАЦИЯ -->
+        <div id="app-navigation"></div>
+        
+        <!-- КНОПКА ВЫХОДА -->
+        <div style="text-align: right; margin-bottom: 16px;">
+            <button class="btn btn-outline btn-sm" id="logoutBtn" style="display: none;" onclick="handleLogout()">🚪 Выйти</button>
+        </div>
+
+        <!-- ФОРМА АВТОРИЗАЦИИ -->
+        <div class="card" id="authSection" style="max-width: 480px; margin: 60px auto;">
+            <h2>✨ Вход или регистрация</h2>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="input" id="loginEmail" value="test@test.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Пароль</label>
+                <input type="password" class="input" id="loginPassword" value="123456">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Имя (для регистрации)</label>
+                <input type="text" class="input" id="loginName" placeholder="Ваше имя">
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" onclick="handleLogin()">🚀 Войти</button>
+                <button class="btn btn-outline" onclick="handleRegister()">📝 Регистрация</button>
+            </div>
+        </div>
+
+        <!-- ОСНОВНОЙ КОНСТРУКТОР -->
+        <div id="appSection" style="display: none;">
+            <!-- Панель действий -->
+            <div class="action-bar">
+                <button class="btn btn-primary" onclick="showCreateQuizModal()">📋 Новый квиз</button>
+                <button class="btn btn-outline" onclick="loadMyQuizzes()">📂 Мои квизы</button>
+                <button class="btn btn-outline" onclick="showAIGenerator()">🤖 ИИ-генератор</button>
+                <button class="btn btn-outline" onclick="previewQuiz()" id="previewBtn" disabled>👁️ Предпросмотр</button>
+                <button class="btn btn-success" onclick="publishQuiz()" id="publishBtn" disabled>🚀 Опубликовать</button>
+                <div class="import-export">
+                    <button class="btn btn-outline btn-sm" onclick="exportQuiz()" id="exportBtn" disabled>⬇️ Экспорт</button>
+                    <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">⬆️ Импорт</button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importQuiz(event)">
+                </div>
+            </div>
+
+            <!-- Двухколоночный layout -->
+            <div class="constructor-layout">
+                <!-- ЛЕВАЯ КОЛОНКА -->
+                <div class="sidebar">
+                    <div class="card quiz-info-card">
+                        <h3 id="currentQuizTitle">Квиз не выбран</h3>
+                        <p class="text-secondary" id="currentQuizDesc"></p>
+                        <div class="d-flex gap-2 mt-3">
+                            <button class="btn btn-primary btn-sm w-full" onclick="addNewQuestion()">➕ Добавить вопрос</button>
+                        </div>
+                        <div class="questions-list" id="questionsList">
+                            <div class="empty-state">Нет вопросов</div>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-outline btn-sm w-full" onclick="saveQuizOrder()">💾 Сохранить порядок</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ПРАВАЯ КОЛОНКА -->
+                <div class="question-editor" id="questionEditor">
+                    <div class="editor-placeholder" id="editorPlaceholder">
+                        <p>👈 Выберите вопрос из списка или создайте новый</p>
+                    </div>
+                    <div id="editorContent" style="display: none;">
+                        <div class="d-flex justify-between items-center mb-3">
+                            <h3>Редактирование вопроса</h3>
+                            <button class="btn btn-outline btn-sm" onclick="deleteCurrentQuestion()">🗑️ Удалить</button>
+                        </div>
+                        
+                        <div class="type-selector" id="questionTypeSelector"></div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Вопрос</label>
+                            <textarea class="input" id="questionText" rows="3"></textarea>
+                        </div>
+                        
+                        <div id="mediaUploadSection"></div>
+                        
+                        <div class="d-flex gap-3 mt-3">
+                            <div class="form-group">
+                                <label class="form-label">Баллы</label>
+                                <input type="number" class="input" id="questionPoints" value="100" style="width: 120px;">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Время (сек)</label>
+                                <input type="number" class="input" id="questionTime" value="30" style="width: 120px;">
+                            </div>
+                        </div>
+                        
+                        <div id="answersSection"></div>
+                        <div id="trueFalseSection"></div>
+                        
+                        <button class="btn btn-outline btn-sm w-full mt-3" onclick="toggleAdvancedSettings()">
+                            <span>⚙️</span> Расширенные настройки
+                        </button>
+                        
+                        <div id="advancedSettingsContainer"></div>
+                        
+                        <div class="d-flex gap-2 mt-4">
+                            <button class="btn btn-primary" onclick="saveCurrentQuestion()">💾 Сохранить</button>
+                            <button class="btn btn-outline" onclick="cancelEdit()">✖️ Отмена</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНЫЕ ОКНА -->
+    <div id="modalsContainer"></div>
+
+    <!-- СКРИПТЫ -->
+    <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/components/nav.js"></script>
+    <script src="/js/components/modals.js"></script>
+    
+    <!-- Типы вопросов -->
+    <script src="/js/question-types/base.js"></script>
+    <script src="/js/question-types/text.js"></script>
+    <script src="/js/question-types/image.js"></script>
+    <script src="/js/question-types/audio.js"></script>
+    <script src="/js/question-types/video.js"></script>
+    <script src="/js/question-types/truefalse.js"></script>
+    
+    <!-- UI и логика -->
+    <script src="/js/constructor-ui.js"></script>
+    <script src="/js/quiz-constructor.js"></script>
+    
+    <!-- Инициализация -->
+    <script>
+        // Определяем недостающие функции-заглушки
+        window.showCreateQuizModal = function() { showModal('createQuizModal'); };
+        window.showAIGenerator = function() { showModal('aiGeneratorModal'); };
+        window.previewQuiz = function() { 
+            if (currentQuiz) {
+                showModal('previewModal');
+                // Здесь логика предпросмотра
+            } else {
+                showToast('Сначала выберите или создайте квиз', 'error');
+            }
+        };
+        window.publishQuiz = async function() {
+            if (!currentQuiz) return;
+            try {
+                const response = await QuizAPI.update(currentQuiz.id, { isPublished: true });
+                if (response.quiz) {
+                    currentQuiz.isPublished = true;
+                    showToast('✅ Квиз опубликован!', 'success');
+                }
+            } catch (error) {
+                showToast('Ошибка публикации', 'error');
+            }
+        };
+        window.exportQuiz = function() {
+            if (currentQuiz) QuizAPI.exportQuiz(currentQuiz.id);
+        };
+        window.importQuiz = async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                await QuizAPI.importQuiz(file);
+                showToast('✅ Импортирован', 'success');
+                loadMyQuizzes();
+            } catch (error) {
+                showToast('Ошибка импорта', 'error');
+            }
+            event.target.value = '';
+        };
+        window.saveQuizOrder = async function() {
+            if (!currentQuiz || !questions.length) return;
+            const questionIds = questions.filter(q => q.id).map(q => q.id);
+            await QuizAPI.reorderQuestions(currentQuiz.id, questionIds);
+            showToast('✅ Порядок сохранён', 'success');
+        };
+        window.cancelEdit = function() {
+            document.getElementById('editorPlaceholder').style.display = 'block';
+            document.getElementById('editorContent').style.display = 'none';
+            currentQuestionIndex = -1;
+        };
+        window.toggleAdvancedSettings = function() {
+            const panel = document.getElementById('advancedSettingsPanel');
+            if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        };
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            Navigation.render('app-navigation', { currentPage: 'constructor' });
+            Modals.render('modalsContainer');
+            
+            if (typeof renderQuestionTypeSelector === 'function') {
+                renderQuestionTypeSelector();
+            }
+            if (typeof renderMediaUploadSection === 'function') {
+                renderMediaUploadSection();
+            }
+            if (typeof renderAnswersSection === 'function') {
+                renderAnswersSection();
+            }
+            if (typeof renderTrueFalseSection === 'function') {
+                renderTrueFalseSection();
+            }
+            if (typeof renderAdvancedSettingsPanel === 'function') {
+                renderAdvancedSettingsPanel();
+            }
+            
+            if (getToken()) {
+                const isAuth = await checkAuth();
+                if (isAuth && currentUser) {
+                    document.getElementById('authSection').style.display = 'none';
+                    document.getElementById('appSection').style.display = 'block';
+                    document.getElementById('logoutBtn').style.display = 'inline-block';
+                    Navigation.updateUser(currentUser.name, getUserInitials());
+                    if (typeof initConstructor === 'function') {
+                        initConstructor();
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

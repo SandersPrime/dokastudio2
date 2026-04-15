@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio — Выполнение задания</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/components/nav.js"></script>
+    <style>
+        .quiz-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background: var(--border-light);
+            border-radius: var(--radius-full);
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: var(--radius-full);
+            transition: width 0.3s;
+        }
+        
+        .question-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            margin-bottom: 20px;
+        }
+        
+        .answers-grid {
+            display: grid;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        
+        .answer-btn {
+            padding: 16px 20px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-light);
+            border-radius: var(--radius-md);
+            font-size: 1.1rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        
+        .answer-btn:hover {
+            border-color: var(--primary);
+            background: rgba(106, 79, 255, 0.05);
+        }
+        
+        .answer-btn.selected {
+            border-color: var(--primary);
+            background: rgba(106, 79, 255, 0.1);
+        }
+        
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 24px;
+        }
+        
+        .timer-display {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+        
+        .result-screen {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .final-score {
+            font-size: 4rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">📚</span>
+                <span id="homeworkTitle">Загрузка...</span>
+            </div>
+            <div class="user-menu">
+                <span id="studentName"></span>
+            </div>
+        </header>
+
+        <!-- Экран входа -->
+        <div class="card" id="loginScreen" style="max-width: 500px; margin: 60px auto;">
+            <h2>📝 Выполнение домашнего задания</h2>
+            <p class="text-secondary">Введите код задания, полученный от учителя</p>
+            
+            <div class="form-group">
+                <input type="text" class="input" id="codeInput" placeholder="Код задания (6 цифр)" maxlength="6">
+            </div>
+            <div class="form-group">
+                <input type="text" class="input" id="studentNameInput" placeholder="Ваше имя">
+            </div>
+            <button class="btn btn-primary w-full" onclick="startHomework()">Начать выполнение</button>
+            
+            <div id="loginError" class="status-toast error" style="display: none; margin-top: 16px;"></div>
+        </div>
+
+        <!-- Экран выполнения -->
+        <div id="quizScreen" style="display: none;">
+            <div class="quiz-container">
+                <div class="card">
+                    <div class="timer-display" id="timer">00:00</div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                    </div>
+                    
+                    <div id="questionContainer">
+                        <div class="question-card">
+                            <h3 id="questionText"></h3>
+                            <div id="mediaContainer"></div>
+                            <div class="answers-grid" id="answersContainer"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="navigation">
+                        <button class="btn btn-outline" id="prevBtn" onclick="prevQuestion()" disabled>← Назад</button>
+                        <span id="questionCounter">1 / 10</span>
+                        <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()">Далее →</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран завершения -->
+        <div class="card result-screen" id="resultScreen" style="display: none;">
+            <h2>🎉 Задание выполнено!</h2>
+            <div class="final-score" id="finalScore">0</div>
+            <p class="text-secondary" id="resultMessage"></p>
+            
+            <div id="answersReview" style="margin-top: 30px; text-align: left;"></div>
+            
+            <button class="btn btn-primary mt-4" onclick="location.reload()">🔄 Пройти заново</button>
+        </div>
+    </div>
+
+    <script>
+        let currentHomework = null;
+        let currentQuiz = null;
+        let questions = [];
+        let currentIndex = 0;
+        let answers = {};
+        let startTime = null;
+        let timerInterval = null;
+        let studentName = '';
+
+        // Автозаполнение кода из URL
+        const pathParts = window.location.pathname.split('/');
+        const codeFromUrl = pathParts[pathParts.length - 1];
+        if (codeFromUrl && /^\d{6}$/.test(codeFromUrl)) {
+            document.getElementById('codeInput').value = codeFromUrl;
+        }
+
+        async function startHomework() {
+            const code = document.getElementById('codeInput').value.trim();
+            studentName = document.getElementById('studentNameInput').value.trim();
+            
+            if (!code || code.length !== 6) {
+                showError('Введите 6-значный код задания');
+                return;
+            }
+            
+            if (!studentName) {
+                showError('Введите ваше имя');
+                return;
+            }
+
+            try {
+                // Получаем информацию о задании
+                const response = await fetch(`/api/homework/code/${code}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showError(data.error || 'Задание не найдено');
+                    return;
+                }
+                
+                currentHomework = data.homework;
+                
+                // Проверяем дедлайн
+                if (new Date(currentHomework.deadline) < new Date()) {
+                    showError('Срок выполнения задания истёк');
+                    return;
+                }
+                
+                // Получаем квиз
+                const quizResponse = await fetch(`/api/quizzes/${currentHomework.quizId}`);
+                const quizData = await quizResponse.json();
+                currentQuiz = quizData.quiz;
+                
+                // Перемешиваем вопросы если нужно
+                questions = currentHomework.shuffleQuestions 
+                    ? [...currentQuiz.questions].sort(() => Math.random() - 0.5)
+                    : currentQuiz.questions;
+                
+                // Создаём запись о начале выполнения
+                const startResponse = await fetch(`/api/homework/${currentHomework.id}/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ studentName })
+                });
+                const startData = await startResponse.json();
+                
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('quizScreen').style.display = 'block';
+                document.getElementById('homeworkTitle').textContent = currentHomework.name;
+                document.getElementById('studentName').textContent = studentName;
+                
+                startTime = Date.now();
+                if (currentHomework.timeLimit > 0) {
+                    startTimer(currentHomework.timeLimit * 60);
+                } else {
+                    startTimer(0);
+                }
+                
+                renderQuestion(0);
+                
+            } catch (error) {
+                showError('Ошибка загрузки задания');
+                console.error(error);
+            }
+        }
+
+        function startTimer(totalSeconds) {
+            let remaining = totalSeconds;
+            const isUnlimited = totalSeconds === 0;
+            
+            timerInterval = setInterval(() => {
+                if (isUnlimited) {
+                    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                    const mins = Math.floor(elapsed / 60);
+                    const secs = elapsed % 60;
+                    document.getElementById('timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                } else {
+                    if (remaining <= 0) {
+                        clearInterval(timerInterval);
+                        submitHomework();
+                        return;
+                    }
+                    const mins = Math.floor(remaining / 60);
+                    const secs = remaining % 60;
+                    document.getElementById('timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                    remaining--;
+                }
+            }, 1000);
+        }
+
+        function renderQuestion(index) {
+            const question = questions[index];
+            
+            document.getElementById('questionText').textContent = question.text;
+            document.getElementById('questionCounter').textContent = `${index + 1} / ${questions.length}`;
+            document.getElementById('progressBar').style.width = `${((index + 1) / questions.length) * 100}%`;
+            
+            // Медиа
+            const mediaContainer = document.getElementById('mediaContainer');
+            if (question.imageUrl && question.type === 'IMAGE') {
+                mediaContainer.innerHTML = `<img src="${question.imageUrl}" style="max-width: 100%; border-radius: 8px; margin-bottom: 16px;">`;
+            } else if (question.imageUrl && question.type === 'AUDIO') {
+                mediaContainer.innerHTML = `<audio controls src="${question.imageUrl}" style="width: 100%; margin-bottom: 16px;"></audio>`;
+            } else {
+                mediaContainer.innerHTML = '';
+            }
+            
+            // Ответы
+            const answersContainer = document.getElementById('answersContainer');
+            const savedAnswer = answers[question.id];
+            
+            answersContainer.innerHTML = question.answers.map((answer, i) => `
+                <div class="answer-btn ${savedAnswer === i ? 'selected' : ''}" onclick="selectAnswer('${question.id}', ${i})">
+                    ${String.fromCharCode(65 + i)}. ${answer.text}
+                </div>
+            `).join('');
+            
+            // Навигация
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').textContent = index === questions.length - 1 ? '🏁 Завершить' : 'Далее →';
+        }
+
+        function selectAnswer(questionId, answerIndex) {
+            answers[questionId] = answerIndex;
+            renderQuestion(currentIndex);
+        }
+
+        function prevQuestion() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                renderQuestion(currentIndex);
+            }
+        }
+
+        function nextQuestion() {
+            const question = questions[currentIndex];
+            
+            // Проверяем, дан ли ответ
+            if (answers[question.id] === undefined) {
+                if (!confirm('Вы не ответили на вопрос. Продолжить?')) {
+                    return;
+                }
+            }
+            
+            if (currentIndex < questions.length - 1) {
+                currentIndex++;
+                renderQuestion(currentIndex);
+            } else {
+                submitHomework();
+            }
+        }
+
+        async function submitHomework() {
+            clearInterval(timerInterval);
+            
+            // Подсчитываем результаты
+            let correctCount = 0;
+            const results = questions.map(q => {
+                const selectedIdx = answers[q.id];
+                const isCorrect = selectedIdx !== undefined && q.answers[selectedIdx]?.isCorrect;
+                if (isCorrect) correctCount++;
+                return {
+                    questionId: q.id,
+                    answerIndex: selectedIdx,
+                    isCorrect
+                };
+            });
+            
+            const score = correctCount * 100;
+            const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+            
+            try {
+                await fetch(`/api/homework/${currentHomework.id}/submit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentName,
+                        answers: results,
+                        score,
+                        timeSpent
+                    })
+                });
+                
+                // Показываем результаты
+                document.getElementById('quizScreen').style.display = 'none';
+                document.getElementById('resultScreen').style.display = 'block';
+                
+                const maxScore = questions.length * 100;
+                document.getElementById('finalScore').textContent = `${score} / ${maxScore}`;
+                document.getElementById('resultMessage').textContent = 
+                    `Правильных ответов: ${correctCount} из ${questions.length}`;
+                
+                // Показываем правильные ответы если разрешено
+                if (currentHomework.showAnswersAfter) {
+                    renderAnswersReview(results);
+                }
+                
+            } catch (error) {
+                alert('Ошибка при отправке результатов');
+                console.error(error);
+            }
+        }
+
+        function renderAnswersReview(results) {
+            const container = document.getElementById('answersReview');
+            container.innerHTML = `
+                <h3>📊 Разбор ответов</h3>
+                ${questions.map((q, i) => {
+                    const result = results[i];
+                    const correctAnswer = q.answers.find(a => a.isCorrect);
+                    const userAnswer = result.answerIndex !== undefined ? q.answers[result.answerIndex] : null;
+                    
+                    return `
+                        <div class="card-pill mb-2 ${result.isCorrect ? 'correct' : 'wrong'}">
+                            <strong>${i + 1}. ${q.text}</strong>
+                            <p class="${result.isCorrect ? 'text-success' : 'text-danger'}">
+                                Ваш ответ: ${userAnswer?.text || 'Нет ответа'}
+                            </p>
+                            ${!result.isCorrect ? `<p class="text-success">Правильно: ${correctAnswer.text}</p>` : ''}
+                        </div>
+                    `;
+                }).join('')}
+            `;
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('loginError');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            setTimeout(() => errorEl.style.display = 'none', 3000);
+        }
+    </script>
+</body>
+</html>
