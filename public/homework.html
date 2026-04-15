@@ -3,510 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DokaStudio — Домашние задания</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <title>DokaStudio — Homework</title>
     <link rel="stylesheet" href="/css/style.css">
-    
     <style>
-        .homework-layout {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-        }
-        
-        .homework-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-lg);
-            padding: 24px;
-            margin-bottom: 16px;
-            transition: all var(--transition);
-        }
-        
-        .homework-card:hover {
-            border-color: var(--primary);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .homework-header {
+        body { padding: 24px; }
+        .homework-page { max-width: 1280px; margin: 0 auto; }
+        .homework-grid { display: grid; grid-template-columns: 380px 1fr; gap: 20px; }
+        .homework-item, .report-row {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
-        }
-        
-        .deadline-badge {
-            padding: 6px 14px;
-            border-radius: var(--radius-full);
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-        
-        .deadline-badge.active {
-            background: rgba(34, 197, 94, 0.1);
-            color: var(--success);
-            border: 1px solid rgba(34, 197, 94, 0.2);
-        }
-        
-        .deadline-badge.expired {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-        
-        .deadline-badge.upcoming {
-            background: rgba(59, 130, 246, 0.1);
-            color: var(--info);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
             gap: 16px;
-            margin: 20px 0;
+            padding: 14px;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            background: rgba(255,255,255,.03);
         }
-        
-        .stat-item {
-            text-align: center;
-            padding: 16px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-md);
+        .homework-title { font-weight: 700; font-size: 18px; }
+        .homework-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .small-text { font-size: 13px; opacity: .78; margin-top: 4px; }
+        .share-line { word-break: break-all; max-width: 560px; }
+        .status-box {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 16px;
         }
-        
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        
-        .stat-label {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-        
-        .student-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .student-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-md);
-            margin-bottom: 8px;
-        }
-        
-        .student-score {
-            font-weight: 700;
-            color: var(--primary);
-        }
-        
-        .student-status {
-            font-size: 0.85rem;
-        }
-        
-        .student-status.completed {
-            color: var(--success);
-        }
-        
-        .student-status.pending {
-            color: var(--warning);
-        }
-        
-        .student-status.not-started {
-            color: var(--text-muted);
-        }
-        
-        .share-section {
-            margin-top: 20px;
-            padding: 20px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-lg);
-        }
-        
-        .share-link {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-        
-        .share-link input {
-            flex: 1;
-        }
-        
-        @media (max-width: 768px) {
-            .homework-layout {
-                grid-template-columns: 1fr;
-            }
+        .status-box.success { background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.25); }
+        .status-box.error { background: rgba(239,68,68,.14); border: 1px solid rgba(239,68,68,.25); }
+        .danger { border-color: rgba(239,68,68,.35); }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+        .summary-item { padding: 14px; border-radius: 12px; background: rgba(255,255,255,.04); text-align: center; }
+        .summary-value { font-size: 28px; font-weight: 800; }
+        .empty-state { padding: 20px; text-align: center; opacity: .7; }
+        @media (max-width: 900px) {
+            .homework-grid { grid-template-columns: 1fr; }
+            .homework-item, .report-row { flex-direction: column; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="app-navigation"></div>
-        <div id="authSection" class="card" style="max-width: 400px; margin: 60px auto;">
-            <h2>Вход</h2>
-            <div class="form-group"><input type="email" class="input" id="loginEmail" placeholder="Email" value="test@test.com"></div>
-            <div class="form-group"><input type="password" class="input" id="loginPassword" placeholder="Пароль" value="123456"></div>
-            <button class="btn btn-primary w-full" onclick="login()">Войти</button>
-        </div>
+<div class="homework-page">
+    <div class="d-flex justify-between items-center mb-3">
+        <h1>Домашние задания</h1>
+        <a class="btn btn-outline" href="/constructor">К конструктору</a>
+    </div>
 
-        <div id="appSection" style="display: none;">
-            <div class="action-bar">
-                <button class="btn btn-primary" onclick="showCreateHomeworkModal()">📝 Создать задание</button>
-                <button class="btn btn-outline" onclick="loadMyHomework()">📂 Мои задания</button>
-                <select class="input" id="homeworkSelect" onchange="loadHomeworkDetails(this.value)" style="width: auto; min-width: 250px;">
-                    <option value="">-- Выберите задание --</option>
-                </select>
+    <div id="teacherStatus" class="status-box"></div>
+
+    <div class="homework-grid">
+        <section class="card">
+            <h2>Создать homework</h2>
+            <form id="createHomeworkForm" onsubmit="event.preventDefault(); createHomework();">
+                <div class="form-group">
+                    <label class="form-label">Квиз</label>
+                    <select id="quizSelect" class="input">
+                        <option value="">Загрузка...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Название</label>
+                    <input id="homeworkTitleInput" class="input" maxlength="120" placeholder="Например: Домашняя викторина">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Описание</label>
+                    <textarea id="homeworkDescriptionInput" class="input" rows="3" placeholder="Инструкция для учеников"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Дедлайн</label>
+                    <input id="dueDateInput" type="datetime-local" class="input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Максимум попыток</label>
+                    <input id="maxAttemptsInput" type="number" class="input" min="1" max="100" value="1">
+                </div>
+                <label class="form-checkbox">
+                    <input id="showCorrectAnswersInput" type="checkbox">
+                    Показывать правильные ответы после выполнения
+                </label>
+                <button class="btn btn-primary mt-3" type="submit">Создать</button>
+            </form>
+        </section>
+
+        <section>
+            <div class="card">
+                <div class="d-flex justify-between items-center">
+                    <h2>Мои homework</h2>
+                    <button class="btn btn-outline" onclick="loadTeacherHomework()">Обновить</button>
+                </div>
+                <div id="homeworkList" class="mt-3">
+                    <div class="empty-state">Загрузка...</div>
+                </div>
             </div>
 
-            <div class="homework-layout">
-                <div>
-                    <div id="homeworkDetails" style="display: none;">
-                        <div class="card">
-                            <div class="homework-header">
-                                <h2 id="homeworkTitle"></h2>
-                                <span class="deadline-badge" id="deadlineBadge"></span>
-                            </div>
-                            <p id="homeworkDesc" class="text-secondary"></p>
-                            
-                            <div class="stats-grid">
-                                <div class="stat-item">
-                                    <div class="stat-value" id="totalStudents">0</div>
-                                    <div class="stat-label">Всего учеников</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-value" id="completedCount">0</div>
-                                    <div class="stat-label">Выполнили</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-value" id="avgScore">0</div>
-                                    <div class="stat-label">Средний балл</div>
-                                </div>
-                            </div>
+            <div id="homeworkDetails" class="card mt-3" style="display:none;">
+                <h2 id="detailsTitle">Homework</h2>
+                <div class="text-secondary" id="detailsQuiz"></div>
+                <p id="detailsDescription"></p>
 
-                            <div class="share-section">
-                                <h3>🔗 Пригласить учеников</h3>
-                                <p class="text-secondary">Поделитесь ссылкой или кодом для выполнения задания</p>
-                                <div class="share-link">
-                                    <input type="text" class="input" id="shareUrl" readonly onclick="this.select()">
-                                    <button class="btn btn-outline" onclick="copyShareUrl()">📋 Копировать</button>
-                                </div>
-                                <p class="mt-2">Код задания: <strong id="homeworkCode">------</strong></p>
-                            </div>
-                        </div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-value" id="detailsPin">------</div>
+                        <div>PIN</div>
                     </div>
-
-                    <div id="myHomeworkList" class="mt-3">
-                        <h3>Мои задания</h3>
-                        <div id="homeworkList"></div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="detailsAttempts">1</div>
+                        <div>Попыток</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="detailsAnswers">Нет</div>
+                        <div>Ответы</div>
                     </div>
                 </div>
 
-                <div>
-                    <div class="card" id="studentsSection" style="display: none;">
-                        <h3>👨‍🎓 Ученики и результаты</h3>
-                        <div class="student-list" id="studentsList"></div>
+                <div class="form-group">
+                    <label class="form-label">Ссылка для учеников</label>
+                    <div class="d-flex gap-2">
+                        <input id="detailsLink" class="input" readonly onclick="this.select()">
+                        <button class="btn btn-outline" onclick="copyHomeworkLink()">Копировать</button>
                     </div>
                 </div>
+                <div class="text-secondary">Дедлайн: <span id="detailsDueDate"></span></div>
             </div>
-        </div>
-    </div>
 
-    <!-- Модалка создания задания -->
-    <div class="preview-modal" id="createHomeworkModal">
-        <div class="preview-content">
-            <h2>📝 Создание домашнего задания</h2>
-            
-            <div class="form-group">
-                <label class="form-label">Выберите квиз</label>
-                <select class="input" id="quizSelect">
-                    <option value="">-- Загрузка квизов --</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Название задания</label>
-                <input type="text" class="input" id="homeworkName" placeholder="Например: ДЗ на 15 апреля">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Описание (необязательно)</label>
-                <textarea class="input" id="homeworkDescription" rows="2" placeholder="Инструкции для учеников"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Дедлайн</label>
-                <input type="datetime-local" class="input" id="deadlineInput">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Ограничение по времени (минут, 0 = без ограничений)</label>
-                <input type="number" class="input" id="timeLimitInput" value="0" min="0">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Максимальное количество попыток</label>
-                <input type="number" class="input" id="attemptsInput" value="1" min="1">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-checkbox">
-                    <input type="checkbox" id="shuffleQuestions"> Перемешивать вопросы
-                </label>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-checkbox">
-                    <input type="checkbox" id="showAnswersAfter"> Показывать правильные ответы после выполнения
-                </label>
-            </div>
-            
-            <div class="d-flex gap-2">
-                <button class="btn btn-primary" onclick="createHomework()">Создать задание</button>
-                <button class="btn btn-outline" onclick="closeModal('createHomeworkModal')">Отмена</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/components/nav.js"></script>   
-    <script>
-        let currentHomework = null;
-        let homeworkList = [];
-
-        async function init() {
-    // Рендерим навигацию
-    Navigation.render('app-navigation', { currentPage: 'homework' });
-    
-    if (getToken()) {
-        const isAuth = await checkAuth();
-        if (isAuth) {
-            document.getElementById('authSection').style.display = 'none';
-            document.getElementById('appSection').style.display = 'block';
-            Navigation.updateUser(currentUser.name, currentUser.name.charAt(0).toUpperCase());
-            await loadQuizzesForSelect();
-            await loadMyHomework();
-        }
-    }
-}
-
-        async function loadQuizzesForSelect() {
-            try {
-                const response = await QuizAPI.getAll({ authorId: currentUser.id });
-                const select = document.getElementById('quizSelect');
-                select.innerHTML = '<option value="">-- Выберите квиз --</option>' +
-                    response.quizzes.map(q => `<option value="${q.id}">${q.title}</option>`).join('');
-            } catch (error) {
-                console.error('Load quizzes error:', error);
-            }
-        }
-
-        async function createHomework() {
-            const quizId = document.getElementById('quizSelect').value;
-            const name = document.getElementById('homeworkName').value;
-            const description = document.getElementById('homeworkDescription').value;
-            const deadline = document.getElementById('deadlineInput').value;
-            const timeLimit = parseInt(document.getElementById('timeLimitInput').value) || 0;
-            const maxAttempts = parseInt(document.getElementById('attemptsInput').value) || 1;
-            const shuffleQuestions = document.getElementById('shuffleQuestions').checked;
-            const showAnswersAfter = document.getElementById('showAnswersAfter').checked;
-
-            if (!quizId) { showToast('Выберите квиз', 'error'); return; }
-            if (!name) { showToast('Введите название задания', 'error'); return; }
-            if (!deadline) { showToast('Укажите дедлайн', 'error'); return; }
-
-            try {
-                const response = await fetch('/api/homework', {
-                    method: 'POST',
-                    headers: getHeaders(),
-                    body: JSON.stringify({
-                        quizId,
-                        name,
-                        description,
-                        deadline: new Date(deadline).toISOString(),
-                        timeLimit,
-                        maxAttempts,
-                        shuffleQuestions,
-                        showAnswersAfter
-                    })
-                });
-
-                const data = await response.json();
-                if (response.ok) {
-                    closeModal('createHomeworkModal');
-                    showToast('✅ Задание создано!', 'success');
-                    await loadMyHomework();
-                    loadHomeworkDetails(data.homework.id);
-                } else {
-                    showToast(data.error || 'Ошибка создания', 'error');
-                }
-            } catch (error) {
-                showToast('Ошибка соединения', 'error');
-            }
-        }
-
-        async function loadMyHomework() {
-            try {
-                const response = await fetch('/api/homework/my', {
-                    headers: getHeaders()
-                });
-                const data = await response.json();
-                homeworkList = data.homework || [];
-                
-                const select = document.getElementById('homeworkSelect');
-                select.innerHTML = '<option value="">-- Выберите задание --</option>' +
-                    homeworkList.map(h => `<option value="${h.id}">${h.name} (${h.quiz.title})</option>`).join('');
-                
-                renderHomeworkList();
-            } catch (error) {
-                console.error('Load homework error:', error);
-            }
-        }
-
-        function renderHomeworkList() {
-            const container = document.getElementById('homeworkList');
-            
-            if (homeworkList.length === 0) {
-                container.innerHTML = '<div class="empty-state">Нет созданных заданий</div>';
-                return;
-            }
-
-            container.innerHTML = homeworkList.map(h => {
-                const deadlineDate = new Date(h.deadline);
-                const now = new Date();
-                const isExpired = deadlineDate < now;
-                const status = isExpired ? 'expired' : 'active';
-                const statusText = isExpired ? 'Истекло' : 'Активно';
-                
-                return `
-                    <div class="homework-card" onclick="loadHomeworkDetails('${h.id}')" style="cursor: pointer;">
-                        <div class="homework-header">
-                            <h4>${escapeHtml(h.name)}</h4>
-                            <span class="deadline-badge ${status}">${statusText}</span>
-                        </div>
-                        <p class="text-secondary">${escapeHtml(h.quiz.title)}</p>
-                        <p class="text-muted" style="font-size: 0.9rem;">
-                            Дедлайн: ${deadlineDate.toLocaleString('ru-RU')}
-                        </p>
-                        <div class="d-flex gap-2 mt-2">
-                            <span class="badge">👥 ${h._count?.submissions || 0} учеников</span>
-                            <span class="badge badge-success">✅ ${h._count?.completed || 0} выполнили</span>
-                        </div>
+            <div id="reportPanel" class="card mt-3" style="display:none;">
+                <h2>Отчёт</h2>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportTotal">0</div>
+                        <div>Попыток</div>
                     </div>
-                `;
-            }).join('');
-        }
-
-        async function loadHomeworkDetails(homeworkId) {
-            if (!homeworkId) return;
-
-            try {
-                const response = await fetch(`/api/homework/${homeworkId}`, {
-                    headers: getHeaders()
-                });
-                const data = await response.json();
-                
-                if (response.ok) {
-                    currentHomework = data.homework;
-                    
-                    document.getElementById('homeworkDetails').style.display = 'block';
-                    document.getElementById('studentsSection').style.display = 'block';
-                    
-                    document.getElementById('homeworkTitle').textContent = currentHomework.name;
-                    document.getElementById('homeworkDesc').textContent = currentHomework.description || '';
-                    document.getElementById('homeworkCode').textContent = currentHomework.pinCode;
-                    
-                    const shareUrl = `${window.location.origin}/homework/${currentHomework.pinCode}`;
-                    document.getElementById('shareUrl').value = shareUrl;
-                    
-                    // Статус дедлайна
-                    const deadlineDate = new Date(currentHomework.deadline);
-                    const now = new Date();
-                    const isExpired = deadlineDate < now;
-                    const badge = document.getElementById('deadlineBadge');
-                    badge.textContent = isExpired ? '⏰ Истекло' : `⏳ До ${deadlineDate.toLocaleDateString('ru-RU')}`;
-                    badge.className = `deadline-badge ${isExpired ? 'expired' : 'active'}`;
-                    
-                    // Статистика
-                    const submissions = currentHomework.submissions || [];
-                    const completed = submissions.filter(s => s.completedAt);
-                    const total = submissions.length;
-                    const avgScore = completed.length > 0 
-                        ? Math.round(completed.reduce((sum, s) => sum + (s.score || 0), 0) / completed.length)
-                        : 0;
-                    
-                    document.getElementById('totalStudents').textContent = total;
-                    document.getElementById('completedCount').textContent = completed.length;
-                    document.getElementById('avgScore').textContent = avgScore;
-                    
-                    // Список учеников
-                    renderStudentsList(submissions);
-                }
-            } catch (error) {
-                console.error('Load details error:', error);
-            }
-        }
-
-        function renderStudentsList(submissions) {
-            const container = document.getElementById('studentsList');
-            
-            if (!submissions || submissions.length === 0) {
-                container.innerHTML = '<div class="empty-state">Пока никто не приступил к заданию</div>';
-                return;
-            }
-
-            container.innerHTML = submissions.map(s => {
-                const status = s.completedAt ? 'completed' : (s.startedAt ? 'pending' : 'not-started');
-                const statusText = s.completedAt ? '✅ Выполнено' : (s.startedAt ? '⏳ В процессе' : '⏸️ Не начато');
-                const statusClass = s.completedAt ? 'completed' : (s.startedAt ? 'pending' : 'not-started');
-                
-                return `
-                    <div class="student-item">
-                        <div>
-                            <strong>${escapeHtml(s.student.name)}</strong>
-                            <div class="student-status ${statusClass}">${statusText}</div>
-                            ${s.completedAt ? `<div class="text-muted" style="font-size: 0.8rem;">${new Date(s.completedAt).toLocaleString('ru-RU')}</div>` : ''}
-                        </div>
-                        <div class="student-score">
-                            ${s.completedAt ? `${s.score} / ${currentHomework.quiz.questions.length * 100}` : '-'}
-                        </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportCompleted">0</div>
+                        <div>Завершено</div>
                     </div>
-                `;
-            }).join('');
-        }
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportAverage">0</div>
+                        <div>Средний балл</div>
+                    </div>
+                </div>
 
-        function copyShareUrl() {
-            const input = document.getElementById('shareUrl');
-            input.select();
-            document.execCommand('copy');
-            showToast('📋 Ссылка скопирована!', 'success');
-        }
+                <h3>Лучший результат по ученикам</h3>
+                <div id="bestResultsList" class="mt-2"></div>
 
-        function showCreateHomeworkModal() {
-            document.getElementById('createHomeworkModal').classList.add('active');
-            // Установить дедлайн по умолчанию (через неделю)
-            const nextWeek = new Date();
-            nextWeek.setDate(nextWeek.getDate() + 7);
-            document.getElementById('deadlineInput').value = nextWeek.toISOString().slice(0, 16);
-        }
+                <h3 class="mt-4">Все попытки</h3>
+                <div id="submissionsList" class="mt-2"></div>
+            </div>
+        </section>
+    </div>
+</div>
 
-        window.login = login;
-        window.logout = logout;
-        window.loadMyHomework = loadMyHomework;
-        window.loadHomeworkDetails = loadHomeworkDetails;
-        window.showCreateHomeworkModal = showCreateHomeworkModal;
-        window.createHomework = createHomework;
-        window.copyShareUrl = copyShareUrl;
-        window.closeModal = closeModal;
-
-        init();
-    </script>
+<script src="/js/api.js"></script>
+<script src="/js/homework-teacher.js"></script>
 </body>
 </html>

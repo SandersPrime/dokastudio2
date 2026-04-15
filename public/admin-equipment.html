@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaLab Admin — товары</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body { font-family: Manrope, var(--font-primary); background: linear-gradient(135deg, #f7fbff, #f4f0e8); }
+        h1, h2, h3 { font-family: Unbounded, var(--font-display); }
+        .admin-hero { padding: 34px 0 22px; display: flex; justify-content: space-between; gap: 20px; align-items: end; }
+        .admin-layout { display: grid; grid-template-columns: 420px 1fr; gap: 24px; align-items: start; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        .full-span { grid-column: 1 / -1; }
+        .checkbox-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 12px 0 20px; }
+        .equipment-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+        .equipment-card { background: white; border: 1px solid var(--border-light); border-radius: 24px; overflow: hidden; box-shadow: var(--shadow-sm); }
+        .equipment-card-image { min-height: 150px; background-size: cover; background-position: center; background-color: #dfe9dd; background-image: linear-gradient(135deg, #d6ff6b, #78d39d); }
+        .equipment-card-body { padding: 20px; }
+        .equipment-card-meta, .equipment-actions, .equipment-price-row { display: flex; flex-wrap: wrap; gap: 10px; }
+        .equipment-price-row { margin: 14px 0; color: var(--text-secondary); justify-content: space-between; }
+        .equipment-status { min-height: 24px; color: var(--text-secondary); margin-bottom: 14px; }
+        .equipment-status-success { color: var(--success); } .equipment-status-error { color: var(--danger); }
+        @media (max-width: 980px) { .admin-layout, .form-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container" id="adminEquipmentPage">
+        <div id="app-navigation"></div>
+        <header class="admin-hero">
+            <div>
+                <span class="badge badge-primary">Admin</span>
+                <h1>DokaLab товары</h1>
+                <p>Создание, редактирование и публикация карточек оборудования.</p>
+            </div>
+            <a class="btn btn-secondary" href="/admin-equipment-requests.html">Заявки</a>
+        </header>
+        <div id="adminEquipmentStatus" class="equipment-status"></div>
+        <main class="admin-layout">
+            <form id="equipmentProductForm" class="card">
+                <h2 id="productFormTitle">Новая карточка товара</h2>
+                <div class="form-grid">
+                    <input class="input" name="title" required placeholder="Название">
+                    <input class="input" name="slug" placeholder="slug, если нужен вручную">
+                    <input class="input full-span" name="shortDescription" placeholder="Короткое описание">
+                    <textarea class="input full-span" name="description" placeholder="Полное описание"></textarea>
+                    <input class="input full-span" name="imageUrl" placeholder="URL обложки">
+                    <textarea class="input full-span" name="galleryJson" placeholder='["/img/1.jpg", "/img/2.jpg"]'></textarea>
+                    <input class="input" name="category" placeholder="Категория">
+                    <input class="input" name="scenarioType" placeholder="Тип сценария">
+                    <input class="input" name="price" type="number" min="0" step="0.01" placeholder="Цена продажи">
+                    <input class="input" name="rentalPriceDay" type="number" min="0" step="0.01" placeholder="Аренда/день">
+                    <input class="input" name="depositAmount" type="number" min="0" step="0.01" placeholder="Депозит">
+                    <input class="input" name="stockQty" type="number" min="0" step="1" placeholder="Остаток">
+                </div>
+                <div class="checkbox-row">
+                    <label><input type="checkbox" name="availableForSale" checked> Продаётся</label>
+                    <label><input type="checkbox" name="availableForRent" checked> Сдаётся</label>
+                    <label><input type="checkbox" name="isPublished"> Опубликован</label>
+                </div>
+                <button class="btn btn-primary" type="submit">Сохранить</button>
+                <button class="btn btn-secondary" type="button" id="resetProductForm">Очистить</button>
+            </form>
+            <section id="adminEquipmentGrid" class="equipment-grid"></section>
+        </main>
+    </div>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/components/nav.js"></script>
+    <script src="/js/equipment.js"></script>
+    <script>if (window.Navigation) Navigation.render('app-navigation', { currentPage: 'admin-equipment' });</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio — Доходы автора</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body { padding: 24px; }
+        .page { max-width: 1200px; margin: 0 auto; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+        .summary-card, .payout-card { border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.035); padding: 14px; }
+        .summary-value { font-size: 24px; font-weight: 800; }
+        .table-row { display: grid; grid-template-columns: 2fr repeat(4, 1fr); gap: 10px; padding: 12px; border-bottom: 1px solid rgba(255,255,255,.08); align-items: center; }
+        .status-box { display: none; padding: 12px 14px; border-radius: 12px; margin: 12px 0; }
+        .status-box.success { background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.25); }
+        .status-box.error { background: rgba(239,68,68,.14); border: 1px solid rgba(239,68,68,.25); }
+        .empty-state { padding: 24px; opacity: .72; }
+        @media (max-width: 800px) { .table-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<main class="page" id="earningsRoot">
+    <div class="d-flex justify-between items-center">
+        <div>
+            <h1>Доходы автора</h1>
+            <p class="text-secondary">Продажи, баланс и заявки на выплаты.</p>
+        </div>
+        <a class="btn btn-outline" href="/author-dashboard.html">Кабинет автора</a>
+    </div>
+    <div id="earningsStatus" class="status-box"></div>
+
+    <section id="summaryCards" class="summary-grid mt-4"></section>
+
+    <section class="card mt-4">
+        <h2>Запросить выплату</h2>
+        <form id="payoutForm" onsubmit="event.preventDefault(); createPayoutRequest();">
+            <div class="d-flex gap-2">
+                <input id="payoutAmount" class="input" type="number" min="1" step="0.01" placeholder="Сумма">
+                <input id="payoutMethod" class="input" placeholder="Способ выплаты">
+            </div>
+            <textarea id="payoutDetails" class="input mt-2" rows="3" placeholder="Реквизиты"></textarea>
+            <button class="btn btn-primary mt-2" type="submit">Создать заявку</button>
+        </form>
+    </section>
+
+    <section class="card mt-4">
+        <h2>Продажи</h2>
+        <div id="salesTable"></div>
+    </section>
+
+    <section class="card mt-4">
+        <h2>Заявки на выплаты</h2>
+        <div id="payoutList"></div>
+    </section>
+</main>
+<script src="/js/api.js"></script>
+<script src="/js/earnings.js"></script>
+</body>
+</html>

@@ -3,618 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DokaStudio — Режим ведущего</title>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/components/nav.js"></script>
-    <!-- Шрифты -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-    <!-- Основной стиль -->
+    <title>DokaStudio — Ведущий</title>
     <link rel="stylesheet" href="/css/style.css">
-    
     <style>
-        /* Специфичные стили для ведущего */
-        .game-dashboard {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-        }
-        
-        .lobby-header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        
-        .pin-code {
-            font-size: clamp(3.5rem, 12vw, 5rem);
-            font-weight: 700;
-            letter-spacing: 0.15em;
-            text-align: center;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            filter: drop-shadow(0 0 30px rgba(99, 102, 241, 0.5));
-            margin: 20px 0;
-        }
-        
-        .qr-container {
+        body { padding: 24px; }
+        .host-page { max-width: 1400px; margin: 0 auto; }
+        .panel-grid { display: grid; grid-template-columns: 380px 1fr 340px; gap: 20px; }
+        .player-row, .leaderboard-row, .stat-row {
             display: flex;
-            justify-content: center;
-            padding: 20px;
-            background: white;
-            border-radius: var(--radius-lg);
-            display: inline-block;
-            box-shadow: var(--shadow-glow);
-            margin: 20px 0;
-        }
-        
-        .qr-container img {
-            display: block;
-            max-width: 220px;
-            height: auto;
-        }
-        
-        .join-link {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            word-break: break-all;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border-light);
-            margin-top: 12px;
-        }
-        
-        .players-container {
-            max-height: 350px;
-            overflow-y: auto;
-            margin-top: 20px;
-        }
-        
-        .player-item {
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 14px 18px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-md);
-            margin-bottom: 8px;
-            transition: all var(--transition-base);
-        }
-        
-        .player-item:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: var(--border-glow);
-        }
-        
-        .player-name {
-            font-weight: 500;
-        }
-        
-        .player-score {
-            color: var(--accent-glow);
-            font-weight: 600;
-        }
-        
-        .question-display {
-            padding: 24px;
-            background: var(--gradient-card);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border-light);
-            margin-bottom: 24px;
-        }
-        
-        .current-question-text {
-            font-size: 1.8rem;
-            font-weight: 600;
-            line-height: 1.4;
-            margin-bottom: 24px;
-        }
-        
-        .answers-grid-host {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            margin: 24px 0;
-        }
-        
-        .answer-card-host {
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid var(--border-light);
-            border-radius: var(--radius-lg);
-            font-size: 1.1rem;
-            transition: all var(--transition-base);
-        }
-        
-        .answer-card-host.correct {
-            border-color: var(--success);
-            background: rgba(34, 197, 94, 0.15);
-            box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
-        }
-        
-        .game-status-badge {
-            display: inline-block;
-            padding: 8px 20px;
-            border-radius: var(--radius-full);
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 16px;
-        }
-        
-        .game-status-badge.lobby {
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--info);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-        }
-        
-        .game-status-badge.question {
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--success);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-        }
-        
-        .game-status-badge.answer {
-            background: rgba(245, 158, 11, 0.2);
-            color: var(--warning);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
-        
-        .game-status-badge.finished {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-        
-        .timer-host {
-            text-align: center;
-            margin: 20px 0;
-        }
-        
-        .timer-number-host {
-            font-size: 4rem;
-            font-weight: 700;
-            font-variant-numeric: tabular-nums;
-            color: var(--accent-glow);
-            text-shadow: 0 0 30px rgba(45, 212, 191, 0.5);
-        }
-        
-        .stats-panel {
-            margin-top: 20px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border-light);
-        }
-        
-        .action-buttons {
-            display: flex;
+            justify-content: space-between;
             gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 20px;
+            padding: 12px 14px;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 14px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,.03);
         }
-        
-        @media (max-width: 900px) {
-            .game-dashboard {
-                grid-template-columns: 1fr;
-            }
-            
-            .answers-grid-host {
-                grid-template-columns: 1fr;
-            }
+        .leaderboard-rank { width: 32px; font-weight: 700; }
+        .leaderboard-name { flex: 1; }
+        .leaderboard-score { font-weight: 700; }
+        .pin-display {
+            font-size: 56px;
+            line-height: 1;
+            font-weight: 800;
+            text-align: center;
+            margin: 12px 0 18px;
+            letter-spacing: 0.16em;
+        }
+        .answer-card-host {
+            padding: 18px;
+            border-radius: 16px;
+            border: 2px solid rgba(255,255,255,.08);
+            background: rgba(255,255,255,.04);
+            margin-bottom: 12px;
+        }
+        .answer-card-host.correct {
+            border-color: #22c55e;
+            background: rgba(34,197,94,.14);
+        }
+        .answer-letter {
+            display: inline-flex;
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,.08);
+            margin-right: 8px;
+            font-weight: 700;
+        }
+        .status-badge {
+            display: inline-flex;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-weight: 700;
+            background: rgba(255,255,255,.08);
+        }
+        .status-badge.active { background: rgba(59,130,246,.16); }
+        .status-badge.reveal { background: rgba(245,158,11,.16); }
+        .status-badge.paused { background: rgba(148,163,184,.18); }
+        .status-badge.leaderboard { background: rgba(34,197,94,.16); }
+        .status-badge.finished { background: rgba(239,68,68,.16); }
+        .timer-box { margin: 16px 0; }
+        .timer-value { font-size: 48px; font-weight: 800; }
+        .small { font-size: 12px; }
+        .empty-state { opacity: .7; padding: 20px 0; text-align: center; }
+        .question-box { margin-top: 16px; }
+        .host-notes {
+            display: none;
+            margin-top: 14px;
+            padding: 12px 14px;
+            border: 1px solid rgba(245,158,11,.26);
+            border-radius: 12px;
+            background: rgba(245,158,11,.10);
+            white-space: pre-wrap;
+        }
+        .player-score-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .score-btn {
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: 8px;
+            padding: 6px 8px;
+            background: rgba(255,255,255,.05);
+            color: inherit;
+            cursor: pointer;
+        }
+        .score-btn:hover { background: rgba(255,255,255,.10); }
+        .error-box {
+            display: none;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            border-radius: 12px;
+            background: rgba(239,68,68,.14);
+            border: 1px solid rgba(239,68,68,.24);
+        }
+        @media (max-width: 1100px) {
+            .panel-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Хедер -->
-       <div id="app-navigation"></div>
-        <!-- Выбор квиза -->
-        <div class="card" id="quizSelectionPanel" style="max-width: 600px; margin: 40px auto;">
-            <h2 style="margin-bottom: 24px;">📋 Выберите квиз</h2>
-            <div class="form-group">
-                <label class="form-label">Доступные квизы</label>
-                <select class="input" id="quizSelect">
-                    <option value="">-- Загрузка... --</option>
-                </select>
+<div class="host-page">
+    <h1>Режим ведущего</h1>
+    <div id="hostError" class="error-box"></div>
+
+    <div id="quizSelectionPanel" class="card">
+        <div class="form-group">
+            <label class="form-label">Выберите квиз</label>
+            <select id="quizSelect" class="input">
+                <option value="">Загрузка...</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" onclick="startSession()">Запустить игру</button>
+    </div>
+
+    <div id="gamePanel" class="panel-grid" style="display:none; margin-top:20px;">
+        <div class="card">
+            <div class="status-badge" id="gameStatus">ЛОББИ</div>
+            <div class="pin-display" id="pinDisplay">------</div>
+            <div id="qrContainer" style="text-align:center;"></div>
+            <div class="mt-3">
+                <div class="text-secondary">Ссылка для входа</div>
+                <div id="joinUrl" style="word-break: break-all;"></div>
             </div>
-            <button class="btn btn-primary btn-lg w-full" onclick="startSession()">
-                <span>🚀</span> Запустить игру
-            </button>
+
+            <div id="lobbySection" class="mt-4">
+                <div class="d-flex justify-between items-center">
+                    <h3>Игроки</h3>
+                    <span class="badge" id="playerCount">0</span>
+                </div>
+                <div id="playersList" class="mt-2">
+                    <div class="empty-state">Ожидание игроков...</div>
+                </div>
+                <div class="mt-3">
+                    <button id="startGameBtn" class="btn btn-primary" onclick="startGame()">Начать игру</button>
+                </div>
+            </div>
         </div>
 
-        <!-- Игровая панель -->
-        <div id="gamePanel" style="display: none;">
-            <div class="game-dashboard">
-                <!-- Левая колонка - Лобби и игра -->
-                <div class="card">
-                    <div id="gameStatusContainer">
-                        <span class="game-status-badge lobby" id="gameStatus">🟢 ОЖИДАНИЕ ИГРОКОВ</span>
-                    </div>
-                    
-                    <!-- Секция лобби -->
-                    <div id="lobbySection">
-                        <div class="lobby-header">
-                            <div class="pin-code" id="pinDisplay">------</div>
-                            <div style="text-align: center;">
-                                <div class="qr-container" id="qrContainer"></div>
-                            </div>
-                            <div class="join-link" id="joinUrl"></div>
-                        </div>
-                        
-                        <div class="d-flex justify-between items-center mt-3">
-                            <h3 style="margin: 0;">👥 Игроки</h3>
-                            <span class="badge badge-primary" id="playerCount">0</span>
-                        </div>
-                        
-                        <div class="players-container" id="playersList">
-                            <div class="empty-state">Ожидание игроков...</div>
-                        </div>
-                        
-                        <div class="mt-4">
-                            <button class="btn btn-primary btn-lg w-full" id="startGameBtn" onclick="startGame()">
-                                <span>▶</span> НАЧАТЬ ИГРУ
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Секция вопроса -->
-                    <div id="questionSection" style="display: none;">
-                        <div class="timer-host">
-                            <div class="timer-number-host" id="timer">30</div>
-                            <div class="timer-bar mt-2">
-                                <div class="timer-progress" id="timerProgress" style="width: 100%"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="question-display">
-                            <div class="current-question-text" id="questionText"></div>
-                            <div class="text-secondary" id="questionInfo"></div>
-                        </div>
-                        
-                        <div class="answers-grid-host" id="answersGrid"></div>
-                        
-                        <div class="action-buttons">
-                            <button class="btn btn-primary" id="showAnswerBtn" onclick="showAnswer()" style="display: none;">
-                                <span>🔍</span> ПОКАЗАТЬ ОТВЕТ
-                            </button>
-                            <button class="btn btn-success" id="nextQuestionBtn" onclick="nextQuestion()" style="display: none;">
-                                <span>⏩</span> СЛЕДУЮЩИЙ ВОПРОС
-                            </button>
-                            <button class="btn btn-outline" id="finishGameBtn" onclick="finishGame()" style="display: none;">
-                                <span>🏁</span> ЗАВЕРШИТЬ
-                            </button>
-                        </div>
+        <div class="card">
+            <div id="questionSection" style="display:none;">
+                <div class="timer-box">
+                    <div class="timer-value" id="timer">30</div>
+                    <div class="timer-bar mt-2">
+                        <div class="timer-progress" id="timerProgress" style="width:100%"></div>
                     </div>
                 </div>
-                
-                <!-- Правая колонка - Турнирная таблица и статистика -->
-                <div class="card">
-                    <h3 style="margin-bottom: 20px;">🏆 Турнирная таблица</h3>
-                    <div id="leaderboard">
-                        <div class="empty-state">Игра ещё не началась</div>
-                    </div>
-                    
-                    <div class="stats-panel" id="answerStats" style="display: none;">
-                        <h4 style="margin-bottom: 16px;">📊 Статистика ответов</h4>
-                        <div id="statsContent"></div>
+
+                <div class="question-box">
+                    <h2 id="questionText">Вопрос</h2>
+                    <div id="questionInfo" class="text-secondary"></div>
+                    <div id="hostNotesBox" class="host-notes">
+                        <strong>Заметки ведущего</strong>
+                        <div id="hostNotesContent" class="mt-2"></div>
                     </div>
                 </div>
+
+                <div id="answersGrid" class="mt-4"></div>
+
+                <div class="d-flex gap-2 mt-3">
+                    <button id="showAnswerBtn" class="btn btn-outline" onclick="showAnswer()">Показать ответ</button>
+                    <button id="pauseQuestionBtn" class="btn btn-outline" onclick="pauseQuestion()" style="display:none;">Пауза</button>
+                    <button id="resumeQuestionBtn" class="btn btn-primary" onclick="resumeQuestion()" style="display:none;">Продолжить</button>
+                    <button id="showLeaderboardBtn" class="btn btn-outline" onclick="showLeaderboard()" style="display:none;">Показать рейтинг</button>
+                    <button id="nextQuestionBtn" class="btn btn-primary" onclick="nextQuestion()" style="display:none;">Следующий вопрос</button>
+                    <button id="finishGameBtn" class="btn btn-outline" onclick="finishGame()">Завершить игру</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Турнирная таблица</h3>
+            <div id="leaderboard" class="mt-3">
+                <div class="empty-state">Пока нет данных</div>
+            </div>
+
+            <div id="answerStats" class="mt-4" style="display:none;">
+                <h3>Статистика ответов</h3>
+                <div id="statsContent" class="mt-2"></div>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const API_URL = 'http://localhost:5000/api';
-        let token = localStorage.getItem('token');
-        let currentUser = null;
-        let socket = null;
-        let currentSession = null;
-        let currentQuiz = null;
-        let timerInterval = null;
-
-        if (!token) {
-            window.location.href = '/constructor.html';
-        } else {
-            checkAuth();
-        }
-
-        async function checkAuth() {
-    try {
-        const response = await fetch(`${API_URL}/auth/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            currentUser = data.user;
-            
-            // Рендерим навигацию
-            Navigation.render('app-navigation', { currentPage: 'host' });
-            Navigation.updateUser(currentUser.name, currentUser.name.charAt(0).toUpperCase());
-            
-            document.getElementById('userName').textContent = `👤 ${currentUser.name}`;
-            loadQuizzes();
-        } else {
-            localStorage.removeItem('token');
-            window.location.href = '/constructor.html';
-        }
-    } catch (error) {
-        console.error('Auth error:', error);
-    }
-}
-
-        async function loadQuizzes() {
-            try {
-                const response = await fetch(`${API_URL}/quizzes`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                const data = await response.json();
-                const select = document.getElementById('quizSelect');
-                
-                if (data.quizzes.length === 0) {
-                    select.innerHTML = '<option value="">-- Нет доступных квизов --</option>';
-                } else {
-                    select.innerHTML = data.quizzes.map(q => 
-                        `<option value="${q.id}">${q.title} (${q._count?.questions || 0} вопросов)</option>`
-                    ).join('');
-                }
-            } catch (error) {
-                console.error('Load quizzes error:', error);
-            }
-        }
-
-        async function startSession() {
-            const quizId = document.getElementById('quizSelect').value;
-            if (!quizId) {
-                alert('Выберите квиз');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/sessions`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ quizId })
-                });
-
-                const data = await response.json();
-                
-                if (response.ok) {
-                    currentSession = data.session;
-                    
-                    document.getElementById('quizSelectionPanel').style.display = 'none';
-                    document.getElementById('gamePanel').style.display = 'block';
-                    
-                    document.getElementById('pinDisplay').textContent = currentSession.pinCode;
-                    document.getElementById('joinUrl').textContent = data.joinUrl;
-                    document.getElementById('qrContainer').innerHTML = `<img src="${data.qrCode}" alt="QR-код">`;
-                    
-                    connectSocket(currentSession.pinCode);
-                    
-                    socket.emit('host:create-room', {
-                        sessionId: currentSession.id,
-                        pinCode: currentSession.pinCode
-                    });
-                } else {
-                    alert(data.error);
-                }
-            } catch (error) {
-                console.error('Start session error:', error);
-                alert('Ошибка создания сессии');
-            }
-        }
-
-        function connectSocket(pinCode) {
-            socket = io('http://localhost:5000');
-            
-            socket.on('connect', () => {
-                console.log('Socket connected');
-            });
-            
-            socket.on('host:room-created', (data) => {
-                console.log('Room created:', data);
-            });
-            
-            socket.on('host:player-joined', (data) => {
-                updatePlayersList(data.players);
-            });
-            
-            socket.on('lobby:update', (data) => {
-                document.getElementById('playerCount').textContent = data.playerCount;
-                if (data.players) {
-                    updatePlayersList(data.players);
-                }
-            });
-            
-            socket.on('game:question', (data) => {
-                displayQuestion(data);
-            });
-            
-            socket.on('game:answer-reveal', (data) => {
-                revealAnswer(data);
-            });
-            
-            socket.on('game:finished', (data) => {
-                showFinalResults(data);
-            });
-        }
-
-        function updatePlayersList(players) {
-            const container = document.getElementById('playersList');
-            
-            if (!players || players.length === 0) {
-                container.innerHTML = '<div class="empty-state">Ожидание игроков...</div>';
-                return;
-            }
-            
-            container.innerHTML = players.map(p => `
-                <div class="player-item">
-                    <span class="player-name">${p.nickname}</span>
-                    <span class="player-score">${p.score || 0} очков</span>
-                </div>
-            `).join('');
-        }
-
-        function startGame() {
-            if (!currentSession) return;
-            
-            socket.emit('host:start-game', { pinCode: currentSession.pinCode });
-            
-            document.getElementById('lobbySection').style.display = 'none';
-            document.getElementById('questionSection').style.display = 'block';
-            
-            document.getElementById('gameStatus').className = 'game-status-badge question';
-            document.getElementById('gameStatus').textContent = '🎯 ИДЁТ ИГРА';
-        }
-
-        function displayQuestion(data) {
-            const question = data.question;
-            
-            document.getElementById('questionText').textContent = question.text;
-            document.getElementById('questionInfo').textContent = 
-                `Вопрос ${data.questionNumber} из ${data.totalQuestions} • ${question.points} очков`;
-            
-            document.getElementById('timer').style.display = 'block';
-            document.getElementById('showAnswerBtn').style.display = 'block';
-            document.getElementById('nextQuestionBtn').style.display = 'none';
-            
-            const answersGrid = document.getElementById('answersGrid');
-            const letters = ['A', 'B', 'C', 'D'];
-            
-            answersGrid.innerHTML = question.answers.map((a, i) => `
-                <div class="answer-card-host" id="answer-${a.id}">
-                    <strong>${letters[i]}.</strong> ${a.text}
-                </div>
-            `).join('');
-            
-            let timeLeft = question.timeLimit || 30;
-            const timeLimit = timeLeft;
-            document.getElementById('timer').textContent = timeLeft;
-            document.getElementById('timerProgress').style.width = '100%';
-            
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timer').textContent = timeLeft;
-                document.getElementById('timerProgress').style.width = `${(timeLeft / timeLimit) * 100}%`;
-                
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    document.getElementById('showAnswerBtn').click();
-                }
-            }, 1000);
-        }
-
-        function showAnswer() {
-            if (timerInterval) {
-                clearInterval(timerInterval);
-            }
-            
-            socket.emit('host:show-answer', { pinCode: currentSession.pinCode });
-        }
-
-        function revealAnswer(data) {
-            document.getElementById('showAnswerBtn').style.display = 'none';
-            document.getElementById('nextQuestionBtn').style.display = 'block';
-            
-            document.getElementById('gameStatus').className = 'game-status-badge answer';
-            document.getElementById('gameStatus').textContent = '📊 ОТВЕТЫ';
-            
-            if (data.correctAnswerId) {
-                const correctEl = document.getElementById(`answer-${data.correctAnswerId}`);
-                if (correctEl) correctEl.classList.add('correct');
-            }
-            
-            updateLeaderboard(data.leaderboard);
-            
-            if (data.statistics) {
-                const statsDiv = document.getElementById('answerStats');
-                statsDiv.style.display = 'block';
-                
-                const totalAnswers = data.statistics.reduce((sum, s) => sum + s._count.answerId, 0);
-                document.getElementById('statsContent').innerHTML = `
-                    <p>Всего ответов: <strong>${totalAnswers}</strong></p>
-                `;
-            }
-        }
-
-        function nextQuestion() {
-            document.getElementById('answerStats').style.display = 'none';
-            document.getElementById('nextQuestionBtn').style.display = 'none';
-            
-            document.getElementById('gameStatus').className = 'game-status-badge question';
-            document.getElementById('gameStatus').textContent = '🎯 ИДЁТ ИГРА';
-            
-            document.querySelectorAll('.answer-card-host').forEach(card => {
-                card.classList.remove('correct');
-            });
-            
-            socket.emit('host:next-question', { pinCode: currentSession.pinCode });
-        }
-
-        function updateLeaderboard(leaderboard) {
-            const container = document.getElementById('leaderboard');
-            
-            if (!leaderboard || leaderboard.length === 0) {
-                container.innerHTML = '<div class="empty-state">Нет данных</div>';
-                return;
-            }
-            
-            container.innerHTML = leaderboard.map((player, index) => {
-                let topClass = '';
-                if (index === 0) topClass = 'top-1';
-                else if (index === 1) topClass = 'top-2';
-                else if (index === 2) topClass = 'top-3';
-                
-                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-                
-                return `
-                    <div class="leaderboard-item ${topClass}">
-                        <span class="leaderboard-rank">${medal}</span>
-                        <span class="leaderboard-name">${player.nickname}</span>
-                        <span class="leaderboard-score">${player.score}</span>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function showFinalResults(data) {
-            document.getElementById('questionSection').style.display = 'none';
-            document.getElementById('lobbySection').style.display = 'block';
-            document.getElementById('startGameBtn').style.display = 'none';
-            document.getElementById('finishGameBtn').style.display = 'block';
-            
-            document.getElementById('gameStatus').className = 'game-status-badge finished';
-            document.getElementById('gameStatus').textContent = '🏆 ИГРА ЗАВЕРШЕНА';
-            
-            updateLeaderboard(data.leaderboard);
-            
-            if (data.winner) {
-                setTimeout(() => {
-                    alert(`🏆 Победитель: ${data.winner.nickname} с ${data.winner.score} очками!`);
-                }, 500);
-            }
-        }
-
-        function finishGame() {
-            if (socket) socket.disconnect();
-            window.location.reload();
-        }
-
-        function logout() {
-            localStorage.removeItem('token');
-            window.location.href = '/constructor.html';
-        }
-    </script>
+<script src="/js/api.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/host-live.js"></script>
 </body>
 </html>

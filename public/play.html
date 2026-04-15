@@ -2,622 +2,153 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DokaStudio — Игрок</title>
-    
-    <!-- Шрифты -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-    <!-- Основной стиль -->
     <link rel="stylesheet" href="/css/style.css">
-    
     <style>
-        /* Специфичные стили для игрока (мобильный-first) */
-        body {
-            padding: 12px;
-            padding-top: 20px;
+        body { padding: 16px; }
+        .play-page { max-width: 760px; margin: 0 auto; }
+        .status-toast {
+            display: none;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-top: 12px;
         }
-        
-        .player-container {
-            max-width: 600px;
-            margin: 0 auto;
+        .status-toast.error {
+            background: rgba(239,68,68,.14);
+            border: 1px solid rgba(239,68,68,.24);
         }
-        
-        .game-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            margin-bottom: 16px;
+        .status-toast.success {
+            background: rgba(34,197,94,.14);
+            border: 1px solid rgba(34,197,94,.24);
         }
-        
-        .player-score-badge {
-            background: var(--gradient-primary);
-            padding: 8px 18px;
-            border-radius: var(--radius-full);
-            font-weight: 600;
-            font-size: 1.1rem;
-            box-shadow: var(--shadow-glow);
-        }
-        
-        /* Экран входа */
-        .join-card {
-            text-align: center;
-        }
-        
-        .pin-input-large {
-            font-size: 2.5rem;
-            text-align: center;
-            letter-spacing: 0.3em;
-            font-weight: 700;
-            padding: 16px;
-        }
-        
-        /* Экран лобби */
-        .waiting-screen {
-            text-align: center;
-        }
-        
-        .player-badge-large {
-            display: inline-block;
-            padding: 16px 32px;
-            background: var(--gradient-card);
-            border: 1px solid var(--border-glow);
-            border-radius: var(--radius-full);
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin: 24px 0;
-            box-shadow: var(--shadow-glow);
-        }
-        
-        .waiting-animation {
-            font-size: 4rem;
-            margin: 20px 0;
-            animation: float 3s ease-in-out infinite;
-        }
-        
-        .players-count-badge {
-            margin-top: 20px;
-            color: var(--text-secondary);
-        }
-        
-        /* Экран вопроса */
-        .question-screen {
-            text-align: center;
-        }
-        
-        .timer-container-player {
-            margin-bottom: 20px;
-        }
-        
-        .timer-number-player {
-            font-size: 3.5rem;
-            font-weight: 700;
-            font-variant-numeric: tabular-nums;
-            color: var(--accent-glow);
-            text-shadow: 0 0 30px rgba(45, 212, 191, 0.5);
-        }
-        
-        .question-text-player {
-            font-size: 1.5rem;
-            font-weight: 600;
-            line-height: 1.4;
-            margin: 20px 0;
-            padding: 16px;
-            background: var(--gradient-card);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border-light);
-        }
-        
-        .answers-grid-player {
-            display: grid;
-            gap: 12px;
-            margin: 20px 0;
-        }
-        
         .answer-btn-player {
-            padding: 18px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid var(--border-light);
-            border-radius: var(--radius-lg);
-            font-size: 1.1rem;
-            font-weight: 500;
-            color: var(--text-primary);
+            display: block;
+            width: 100%;
             text-align: left;
-            cursor: pointer;
-            transition: all var(--transition-base);
-            backdrop-filter: blur(10px);
-            -webkit-tap-highlight-color: transparent;
+            padding: 18px;
+            margin-bottom: 12px;
+            border-radius: 16px;
+            border: 2px solid rgba(255,255,255,.08);
+            background: rgba(255,255,255,.04);
+            color: inherit;
         }
-        
-        .answer-btn-player:active {
-            transform: scale(0.98);
-        }
-        
         .answer-btn-player.selected {
-            background: rgba(99, 102, 241, 0.3);
-            border-color: var(--primary);
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+            border-color: #6366f1;
+            background: rgba(99,102,241,.14);
         }
-        
-        .answer-btn-player.correct {
-            background: rgba(34, 197, 94, 0.3);
-            border-color: var(--success);
-        }
-        
-        .answer-btn-player.wrong {
-            background: rgba(239, 68, 68, 0.3);
-            border-color: var(--danger);
-        }
-        
-        .answer-btn-player:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        
         .answer-letter {
-            display: inline-block;
+            display: inline-flex;
             width: 28px;
             height: 28px;
-            line-height: 28px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius-sm);
-            margin-right: 12px;
+            border-radius: 999px;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,.08);
+            margin-right: 8px;
             font-weight: 700;
         }
-        
-        /* Экран результатов */
-        .result-screen {
-            text-align: center;
+        .question-media {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 16px;
+            margin: 16px 0;
         }
-        
-        .result-icon {
-            font-size: 5rem;
-            margin: 20px 0;
-        }
-        
-        .score-display-large {
-            font-size: 4rem;
+        .score-pill {
+            display: inline-flex;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.08);
             font-weight: 700;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin: 20px 0;
         }
-        
-        .result-message {
-            font-size: 1.3rem;
-            margin: 20px 0;
-            padding: 16px;
-            border-radius: var(--radius-lg);
-        }
-        
-        .result-message.correct {
-            background: rgba(34, 197, 94, 0.15);
-            color: var(--success);
-        }
-        
-        .result-message.wrong {
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--danger);
-        }
-        
-        .waiting-message {
-            color: var(--text-muted);
-            margin-top: 30px;
-            font-style: italic;
-            animation: pulse-glow 2s infinite;
-        }
-        
-        /* Экран финала */
-        .final-screen {
-            text-align: center;
-        }
-        
-        .final-rank {
-            font-size: 2rem;
-            margin: 20px 0;
-        }
-        
-        .final-score {
-            font-size: 3.5rem;
-            font-weight: 700;
-            color: var(--accent-glow);
-            margin: 20px 0;
-        }
-        
-        /* Статус */
-        .status-toast {
-            padding: 12px 20px;
-            border-radius: var(--radius-lg);
-            margin-top: 16px;
-            font-size: 0.95rem;
-            animation: slideIn 0.3s ease;
-        }
-        
-        .status-toast.error {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-        
-        .status-toast.success {
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--success);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-        }
-        
-        /* Адаптив */
-        @media (max-width: 480px) {
-            body { padding: 8px; }
-            .question-text-player { font-size: 1.3rem; }
-            .answer-btn-player { padding: 14px 16px; font-size: 1rem; }
-            .timer-number-player { font-size: 2.8rem; }
+        .center-box { text-align: center; }
+        .timer-value { font-size: 52px; font-weight: 800; }
+        .big-score { font-size: 48px; font-weight: 800; }
+        .leaderboard-row-player {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,.04);
         }
     </style>
 </head>
 <body>
-    <div class="player-container">
-        <!-- Хедер -->
-        <header class="game-header">
-            <div class="logo" style="font-size: 1.5rem;">
-                <span>🎮</span> DokaStudio
-            </div>
-            <div id="scoreDisplay" class="player-score-badge" style="display: none;">0</div>
-        </header>
-
-        <!-- ЭКРАН 1: Вход -->
-        <div class="card join-card" id="joinScreen">
-            <h2 style="margin-bottom: 8px;">Введите код</h2>
-            <p class="text-secondary" style="margin-bottom: 24px;">6 цифр с экрана ведущего</p>
-            
-            <div class="form-group">
-                <input type="text" class="input pin-input-large" id="pinInput" 
-                       placeholder="000000" maxlength="6" inputmode="numeric" autofocus>
-            </div>
-            
-            <div class="form-group">
-                <input type="text" class="input" id="nicknameInput" 
-                       placeholder="Ваше имя" maxlength="20">
-            </div>
-            
-            <button class="btn btn-primary btn-lg w-full" onclick="joinGame()">
-                <span>🎯</span> ПРИСОЕДИНИТЬСЯ
-            </button>
-            
-            <div id="joinStatus" class="status-toast" style="display: none;"></div>
-        </div>
-
-        <!-- ЭКРАН 2: Лобби (ожидание) -->
-        <div class="card waiting-screen" id="waitingScreen" style="display: none;">
-            <h2>✅ Вы в игре!</h2>
-            <div class="player-badge-large" id="playerNameDisplay"></div>
-            <div class="waiting-animation">⏳</div>
-            <p class="text-secondary">Ожидаем начала игры...</p>
-            <p class="players-count-badge" id="playersCount">Игроков в лобби: 1</p>
-        </div>
-
-        <!-- ЭКРАН 3: Вопрос -->
-        <div class="card question-screen" id="questionScreen" style="display: none;">
-            <div class="timer-container-player">
-                <div class="timer-number-player" id="timerDisplay">30</div>
-                <div class="timer-bar mt-2">
-                    <div class="timer-progress" id="timerProgress" style="width: 100%"></div>
-                </div>
-            </div>
-            
-            <div class="question-text-player" id="questionText"></div>
-            
-            <div class="answers-grid-player" id="answersGrid"></div>
-            
-            <div id="answerStatus" class="status-toast" style="display: none;"></div>
-        </div>
-
-        <!-- ЭКРАН 4: Результат ответа -->
-        <div class="card result-screen" id="resultScreen" style="display: none;">
-            <div class="result-icon" id="resultIcon">🎯</div>
-            <h2 id="resultTitle">Ответ принят!</h2>
-            <div class="score-display-large" id="resultScore">+0</div>
-            <div class="result-message" id="resultMessage"></div>
-            <p class="waiting-message">Ожидаем следующий вопрос...</p>
-        </div>
-
-        <!-- ЭКРАН 5: Финал игры -->
-        <div class="card final-screen" id="finalScreen" style="display: none;">
-            <div class="result-icon">🏆</div>
-            <h2 class="gradient-text">Игра завершена!</h2>
-            <div class="final-rank" id="finalPlace"></div>
-            <div class="final-score" id="finalScore">0</div>
-            <p class="text-secondary" id="finalMessage"></p>
-            <button class="btn btn-primary btn-lg w-full mt-4" onclick="location.reload()">
-                <span>🔄</span> ИГРАТЬ СНОВА
-            </button>
-        </div>
+<div class="play-page">
+    <div class="d-flex justify-between items-center mb-3">
+        <h1>Игрок</h1>
+        <div id="scoreDisplay" class="score-pill" style="display:none;">0 pts</div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        let socket = null;
-        let currentPin = '';
-        let currentPlayer = null;
-        let currentScore = 0;
-        let timerInterval = null;
-        let questionStartTime = 0;
-        let currentQuestion = null;
-        let selectedAnswer = null;
-        let answerSubmitted = false;
+    <div id="joinScreen" data-screen class="card">
+        <h2>Подключение к игре</h2>
+        <div class="form-group">
+            <label class="form-label">PIN-код</label>
+            <input id="pinInput" class="input" maxlength="6" inputmode="numeric" placeholder="123456">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Ваше имя</label>
+            <input id="nicknameInput" class="input" maxlength="40" placeholder="Например, Константин">
+        </div>
+        <button class="btn btn-primary" onclick="joinGame()">Войти</button>
+        <div id="joinStatus" class="status-toast"></div>
+    </div>
 
-        // Автозаполнение PIN из URL
-        const pathParts = window.location.pathname.split('/');
-        const pinFromUrl = pathParts[pathParts.length - 1];
-        if (pinFromUrl && /^\d{6}$/.test(pinFromUrl)) {
-            document.getElementById('pinInput').value = pinFromUrl;
-        }
+    <div id="waitingScreen" data-screen class="card center-box" style="display:none;">
+        <h2>Вы в лобби</h2>
+        <div id="playerNameDisplay" class="big-score" style="font-size:32px; margin:16px 0;"></div>
+        <div class="text-secondary">Ожидаем начала игры...</div>
+        <div id="playersCount" class="mt-3">Игроков в лобби: 0</div>
+    </div>
 
-        function showScreen(screenId) {
-            document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
-            document.getElementById(screenId).style.display = 'block';
-        }
+    <div id="questionScreen" data-screen class="card" style="display:none;">
+        <div class="center-box">
+            <div id="timerDisplay" class="timer-value">30</div>
+            <div class="timer-bar mt-2">
+                <div class="timer-progress" id="timerProgress" style="width:100%"></div>
+            </div>
+        </div>
 
-        function showStatus(message, isError = false, elementId = 'joinStatus') {
-            const statusEl = document.getElementById(elementId);
-            statusEl.textContent = message;
-            statusEl.className = `status-toast ${isError ? 'error' : 'success'}`;
-            statusEl.style.display = 'block';
-            
-            setTimeout(() => {
-                statusEl.style.display = 'none';
-            }, 3000);
-        }
+        <h2 id="questionText" class="mt-4">Вопрос</h2>
+        <div id="questionMedia"></div>
+        <div id="answersGrid" class="mt-3"></div>
+        <div id="answerStatus" class="status-toast"></div>
+    </div>
 
-        function updateScoreDisplay() {
-            const scoreEl = document.getElementById('scoreDisplay');
-            scoreEl.textContent = `${currentScore} pts`;
-            scoreEl.style.display = currentScore > 0 ? 'block' : 'none';
-        }
+    <div id="resultScreen" data-screen class="card center-box" style="display:none;">
+        <div id="resultIcon" style="font-size:64px;">✅</div>
+        <h2 id="resultTitle" class="mt-2">Ответ принят</h2>
+        <div id="resultScore" class="big-score mt-3">+0</div>
+        <div id="resultMessage" class="mt-3"></div>
+    </div>
 
-        async function joinGame() {
-            const pin = document.getElementById('pinInput').value.trim();
-            const nickname = document.getElementById('nicknameInput').value.trim();
+    <div id="pausedScreen" data-screen class="card center-box" style="display:none;">
+        <h2>Игра на паузе</h2>
+        <div class="text-secondary mt-3">Ждём продолжения от ведущего</div>
+    </div>
 
-            if (!pin || pin.length !== 6) {
-                showStatus('Введите 6-значный код', true);
-                return;
-            }
+    <div id="leaderboardScreen" data-screen class="card" style="display:none;">
+        <h2>Рейтинг</h2>
+        <div id="playerLeaderboard" class="mt-3"></div>
+        <div class="text-secondary mt-3 center-box">Ждём следующий вопрос</div>
+    </div>
 
-            if (!nickname) {
-                showStatus('Введите ваше имя', true);
-                return;
-            }
+    <div id="finalScreen" data-screen class="card center-box" style="display:none;">
+        <div style="font-size:64px;">🏆</div>
+        <h2 class="mt-2">Игра завершена</h2>
+        <div id="finalPlace" class="big-score mt-3" style="font-size:32px;"></div>
+        <div id="finalScore" class="big-score mt-2"></div>
+        <div id="finalMessage" class="mt-3 text-secondary"></div>
+        <button class="btn btn-primary mt-4" onclick="location.reload()">Играть снова</button>
+    </div>
+</div>
 
-            currentPin = pin;
-            document.getElementById('playerNameDisplay').textContent = nickname;
-
-            // Проверяем существование сессии
-            try {
-                const response = await fetch(`/api/sessions/pin/${pin}`);
-                if (!response.ok) {
-                    const data = await response.json();
-                    showStatus(data.error || 'Игра не найдена', true);
-                    return;
-                }
-            } catch (error) {
-                showStatus('Ошибка подключения к серверу', true);
-                return;
-            }
-
-            // Подключаемся к WebSocket
-            connectSocket(pin, nickname);
-        }
-
-        function connectSocket(pin, nickname) {
-            socket = io('http://localhost:5000');
-
-            socket.on('connect', () => {
-                console.log('Connected to game');
-                socket.emit('player:join', {
-                    pinCode: pin,
-                    nickname: nickname
-                });
-            });
-
-            socket.on('player:joined', (data) => {
-                currentPlayer = { id: data.playerId, nickname: nickname };
-                showScreen('waitingScreen');
-            });
-
-            socket.on('lobby:update', (data) => {
-                document.getElementById('playersCount').textContent = 
-                    `Игроков в лобби: ${data.playerCount}`;
-            });
-
-            socket.on('game:question', (data) => {
-                displayQuestion(data);
-            });
-
-            socket.on('player:answer-result', (data) => {
-                showAnswerResult(data);
-            });
-
-            socket.on('game:answer-reveal', (data) => {
-                revealCorrectAnswer(data);
-            });
-
-            socket.on('game:finished', (data) => {
-                showFinalResults(data);
-            });
-
-            socket.on('error', (data) => {
-                alert(data.message);
-            });
-        }
-
-        function displayQuestion(data) {
-            // Сброс состояния
-            answerSubmitted = false;
-            selectedAnswer = null;
-            currentQuestion = data.question;
-            
-            // Обновление UI
-            document.getElementById('questionText').textContent = data.question.text;
-            
-            // Отрисовка ответов
-            const answersGrid = document.getElementById('answersGrid');
-            const letters = ['A', 'B', 'C', 'D'];
-            
-            answersGrid.innerHTML = data.question.answers.map((answer, i) => `
-                <button class="answer-btn-player" onclick="selectAnswer('${answer.id}', ${i})" id="answer-${answer.id}">
-                    <span class="answer-letter">${letters[i]}</span> ${answer.text}
-                </button>
-            `).join('');
-            
-            // Таймер
-            const timeLimit = data.question.timeLimit || 30;
-            questionStartTime = Date.now();
-            startTimer(timeLimit);
-            
-            showScreen('questionScreen');
-        }
-
-        function startTimer(seconds) {
-            let timeLeft = seconds;
-            const timerDisplay = document.getElementById('timerDisplay');
-            const timerProgress = document.getElementById('timerProgress');
-            
-            if (timerInterval) clearInterval(timerInterval);
-            
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                timerDisplay.textContent = timeLeft;
-                timerProgress.style.width = `${(timeLeft / seconds) * 100}%`;
-                
-                if (timeLeft <= 5) {
-                    timerDisplay.style.color = 'var(--danger)';
-                }
-                
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    timerDisplay.textContent = '0';
-                    
-                    // Если не ответили — отправляем пустой ответ
-                    if (!answerSubmitted && currentQuestion) {
-                        submitAnswer(null);
-                    }
-                }
-            }, 1000);
-        }
-
-        function selectAnswer(answerId, index) {
-            if (answerSubmitted) return;
-            
-            // Снимаем выделение с предыдущего
-            if (selectedAnswer) {
-                document.getElementById(`answer-${selectedAnswer}`).classList.remove('selected');
-            }
-            
-            // Выделяем новый
-            selectedAnswer = answerId;
-            document.getElementById(`answer-${answerId}`).classList.add('selected');
-            
-            // Отправляем ответ
-            submitAnswer(answerId);
-        }
-
-        function submitAnswer(answerId) {
-            if (answerSubmitted) return;
-            
-            answerSubmitted = true;
-            clearInterval(timerInterval);
-            
-            const responseTimeMs = Date.now() - questionStartTime;
-            
-            socket.emit('player:answer', {
-                pinCode: currentPin,
-                questionId: currentQuestion.id,
-                answerId: answerId,
-                responseTimeMs: responseTimeMs
-            });
-            
-            // Блокируем кнопки
-            document.querySelectorAll('.answer-btn-player').forEach(btn => {
-                btn.disabled = true;
-            });
-        }
-
-        function showAnswerResult(data) {
-            currentScore = data.totalScore;
-            updateScoreDisplay();
-            
-            const isCorrect = data.isCorrect;
-            const pointsAwarded = data.pointsAwarded;
-            
-            document.getElementById('resultIcon').textContent = isCorrect ? '🎉' : '😕';
-            document.getElementById('resultTitle').textContent = isCorrect ? 'Отлично!' : 'Почти!';
-            document.getElementById('resultScore').textContent = isCorrect ? `+${pointsAwarded}` : '+0';
-            
-            const msgEl = document.getElementById('resultMessage');
-            msgEl.textContent = isCorrect ? '✓ Правильный ответ!' : '✗ Неправильно';
-            msgEl.className = `result-message ${isCorrect ? 'correct' : 'wrong'}`;
-            
-            showScreen('resultScreen');
-        }
-
-        function revealCorrectAnswer(data) {
-            // Подсвечиваем правильный ответ
-            if (data.correctAnswerId) {
-                const correctBtn = document.getElementById(`answer-${data.correctAnswerId}`);
-                if (correctBtn) correctBtn.classList.add('correct');
-            }
-            
-            // Подсвечиваем неправильный выбор
-            if (selectedAnswer && selectedAnswer !== data.correctAnswerId) {
-                const wrongBtn = document.getElementById(`answer-${selectedAnswer}`);
-                if (wrongBtn) wrongBtn.classList.add('wrong');
-            }
-        }
-
-        function showFinalResults(data) {
-            const leaderboard = data.leaderboard;
-            const myResult = leaderboard.find(p => p.nickname === currentPlayer?.nickname);
-            
-            const finalScore = myResult ? myResult.score : currentScore;
-            document.getElementById('finalScore').textContent = finalScore;
-            
-            const place = leaderboard.findIndex(p => p.nickname === currentPlayer?.nickname) + 1;
-            
-            if (place === 1) {
-                document.getElementById('finalPlace').innerHTML = '🥇 1 МЕСТО 🥇';
-                document.getElementById('finalMessage').textContent = 'Поздравляем! Вы победитель!';
-            } else if (place === 2) {
-                document.getElementById('finalPlace').innerHTML = '🥈 2 МЕСТО 🥈';
-                document.getElementById('finalMessage').textContent = 'Отличный результат!';
-            } else if (place === 3) {
-                document.getElementById('finalPlace').innerHTML = '🥉 3 МЕСТО 🥉';
-                document.getElementById('finalMessage').textContent = 'Вы в тройке лучших!';
-            } else {
-                document.getElementById('finalPlace').textContent = `${place} место из ${leaderboard.length}`;
-                document.getElementById('finalMessage').textContent = 'Спасибо за игру!';
-            }
-            
-            showScreen('finalScreen');
-            
-            if (socket) socket.disconnect();
-        }
-
-        // Ввод только цифр для PIN
-        document.getElementById('pinInput').addEventListener('input', function(e) {
-            this.value = this.value.replace(/\D/g, '').slice(0, 6);
-        });
-
-        // Enter для отправки
-        document.getElementById('pinInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') joinGame();
-        });
-        
-        document.getElementById('nicknameInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') joinGame();
-        });
-    </script>
+<script src="/js/api.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/play-live.js"></script>
 </body>
 </html>

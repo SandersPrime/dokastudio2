@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio — Каталог шаблонов</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body { padding: 24px; }
+        .catalog-page { max-width: 1280px; margin: 0 auto; }
+        .catalog-toolbar {
+            display: grid;
+            grid-template-columns: 2fr repeat(4, 1fr) auto;
+            gap: 10px;
+            align-items: end;
+            margin: 20px 0;
+        }
+        .catalog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+        }
+        .catalog-card {
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255,255,255,.035);
+        }
+        .catalog-cover, .quiz-cover-large {
+            min-height: 160px;
+            background: linear-gradient(135deg, rgba(34,197,94,.22), rgba(14,165,233,.18));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .catalog-cover img, .quiz-cover-large img { width: 100%; height: 100%; object-fit: cover; }
+        .cover-placeholder { font-weight: 800; font-size: 28px; opacity: .78; }
+        .catalog-body { padding: 16px; }
+        .catalog-meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; opacity: .78; }
+        .catalog-footer, .catalog-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            margin-top: 14px;
+        }
+        .status-box { display: none; padding: 12px 14px; border-radius: 12px; margin: 12px 0; }
+        .status-box.success { background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.25); }
+        .status-box.error { background: rgba(239,68,68,.14); border: 1px solid rgba(239,68,68,.25); }
+        .empty-state { padding: 24px; opacity: .72; }
+        @media (max-width: 960px) {
+            .catalog-toolbar { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<main class="catalog-page">
+    <div class="d-flex justify-between items-center">
+        <div>
+            <h1>Каталог шаблонов</h1>
+            <p class="text-secondary">Готовые опубликованные квизы, которые можно добавить себе.</p>
+        </div>
+        <a class="btn btn-outline" href="/">На главную</a>
+    </div>
+
+    <div id="catalogStatus" class="status-box"></div>
+
+    <section class="card">
+        <div class="catalog-toolbar">
+            <div>
+                <label class="form-label">Поиск</label>
+                <input id="catalogSearch" class="input" placeholder="Название или описание">
+            </div>
+            <div>
+                <label class="form-label">Категория</label>
+                <input id="catalogCategory" class="input" placeholder="history">
+            </div>
+            <div>
+                <label class="form-label">Возраст</label>
+                <input id="catalogAgeGroup" class="input" placeholder="12+">
+            </div>
+            <div>
+                <label class="form-label">Формат</label>
+                <input id="catalogFormat" class="input" placeholder="party">
+            </div>
+            <div>
+                <label class="form-label">Цена</label>
+                <select id="catalogIsPaid" class="input">
+                    <option value="">Любая</option>
+                    <option value="false">Бесплатные</option>
+                    <option value="true">Платные</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="loadCatalog()">Найти</button>
+        </div>
+    </section>
+
+    <section id="catalogGrid" class="catalog-grid mt-4">
+        <div class="empty-state">Загрузка...</div>
+    </section>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/catalog.js"></script>
+</body>
+</html>
