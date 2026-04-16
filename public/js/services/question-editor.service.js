@@ -13,12 +13,15 @@ const QuestionEditorService = {
    */
   normalizeFormData(question, document = window.document) {
     const type = question.type || 'TEXT';
-    const formValues = this.collectFormValues(type, document);
+    const formValues = this.collectFormValues(type, document, question.configJson);
+    const advancedValues = this.collectAdvancedSettings(document);
     const answers = this.collectAnswers(formValues.type, document);
 
     return {
       ...question,
       ...formValues,
+      ...advancedValues,
+      elementType: formValues.elementType,
       answers,
     };
   },
@@ -28,52 +31,85 @@ const QuestionEditorService = {
    * @param {Document} document
    * @returns {Object}
    */
-  collectFormValues(type, document) {
+  collectFormValues(type, document, existingConfigJson = null) {
     const selectedType = document.getElementById('questionTypeSelect')?.value || type;
+    const elementType = this.getElementTypeForMode(selectedType);
     return {
       text: this.getValue(document, 'questionText'),
       subtitle: this.getValue(document, 'questionSubtitle'),
       points: this.getIntValue(document, 'questionPoints', 100),
       timeLimit: this.getIntValue(document, 'questionTime', 30),
+      elementType,
       type: selectedType,
       gameMode: selectedType,
-      layoutType: this.getLayoutTypeForMode(selectedType),
+      layoutType: this.getLayoutTypeForMode(selectedType, elementType),
       backgroundColor: this.getValue(document, 'backgroundColor'),
       backgroundImageUrl: this.getValue(document, 'backgroundImageUrl'),
-      configJson: this.buildModeConfig(selectedType, document),
+      configJson: this.buildModeConfig(selectedType, document, existingConfigJson),
     };
   },
 
-  getLayoutTypeForMode(type) {
+  getElementTypeForMode(type) {
     if (type === 'INFO_SLIDE') return 'INFO_SLIDE';
     if (type === 'ROUND_INTRO') return 'ROUND_INTRO';
     if (['JEOPARDY_ROUND', 'MILLIONAIRE_ROUND'].includes(type)) return 'GAME_ROUND';
     return 'QUESTION';
   },
 
-  buildModeConfig(type, document) {
+  getLayoutTypeForMode(type, elementType = null) {
+    return elementType || this.getElementTypeForMode(type);
+  },
+
+  buildModeConfig(type, document, existingConfigJson = null) {
+    let existingConfig = {};
+    if (existingConfigJson) {
+      try {
+        existingConfig = JSON.parse(existingConfigJson);
+      } catch (error) {
+        existingConfig = {};
+      }
+    }
     const baseConfig = {
+      ...existingConfig,
       mode: type,
+      elementType: this.getElementTypeForMode(type),
       backgroundColor: this.getValue(document, 'backgroundColor'),
       backgroundImageUrl: this.getValue(document, 'backgroundImageUrl'),
+      appearance: this.collectAppearanceSettings(document),
     };
 
     if (type === 'JEOPARDY_ROUND') {
       return JSON.stringify({
         ...baseConfig,
-        categories: ['Тема 1', 'Тема 2', 'Тема 3', 'Тема 4'],
-        values: [100, 200, 300, 400, 500],
+        categories: existingConfig.categories || ['Тема 1', 'Тема 2', 'Тема 3', 'Тема 4'],
+        values: existingConfig.values || [100, 200, 300, 400, 500],
       });
     }
 
     if (type === 'MILLIONAIRE_ROUND') {
       return JSON.stringify({
         ...baseConfig,
-        ladder: [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000],
+        ladder: existingConfig.ladder || [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000],
       });
     }
 
     return JSON.stringify(baseConfig);
+  },
+
+  collectAppearanceSettings(document) {
+    const getValue = (id, fallback = '') => {
+      const el = document.getElementById(id);
+      return el ? el.value || fallback : fallback;
+    };
+
+    return {
+      template: getValue('questionTemplate', 'classic'),
+      titleColor: getValue('titleColor', '#111827'),
+      answerColor: getValue('answerColor', '#111827'),
+      titleSize: this.getIntValue(document, 'titleSize', 48),
+      answerSize: this.getIntValue(document, 'answerSize', 18),
+      answerLayout: getValue('answerLayout', 'grid-2'),
+    };
   },
 
   /**

@@ -108,6 +108,14 @@ const QuizAPI = {
         return parseJsonResponse(response);
     },
 
+    async getLibrary() {
+        const response = await fetch(`${API_URL}/quizzes/library`, {
+            headers: getHeaders(),
+        });
+
+        return parseJsonResponse(response);
+    },
+
     async getById(id) {
         const response = await fetch(`${API_URL}/quizzes/${id}`, {
             headers: getHeaders(),

@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/constructor.css">
     <link rel="stylesheet" href="/css/ui-modernization.css">
+    <link rel="stylesheet" href="/css/ribbon.css">
     
     <!-- Библиотеки -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -50,68 +51,62 @@
         <!-- ОСНОВНОЙ КОНСТРУКТОР -->
         <div id="appSection" style="display: none;">
             <header class="constructor-topbar">
-                <div>
-                    <div class="page-kicker">Конструктор квиза</div>
+                <div class="topbar-meta">
+                    <div class="page-kicker">Конструктор</div>
                     <h1 id="constructorPageTitle">Рабочее пространство автора</h1>
-                    <p class="text-secondary">Соберите сценарий, проверьте вопросы и подготовьте квиз к запуску.</p>
+                    <p class="text-secondary">Соберите структуру викторины, задайте режимы и проверьте сценарий.</p>
                 </div>
-                <div class="save-status" id="saveStatus" aria-live="polite">Готов к работе</div>
+                <div class="topbar-actions">
+                    <div class="save-status" id="saveStatus" aria-live="polite">Готов к работе</div>
+                </div>
             </header>
-            <!-- Панель действий -->
-            <div class="action-bar">
-                <button class="btn btn-primary" onclick="showCreateQuizModal()">📋 Новый квиз</button>
-                <button class="btn btn-outline" onclick="loadMyQuizzes()">📂 Мои квизы</button>
-                <button class="btn btn-outline" onclick="showAIGenerator()">🤖 ИИ-генератор</button>
-                <button class="btn btn-outline" onclick="previewQuiz()" id="previewBtn" disabled>👁️ Предпросмотр</button>
-                <button class="btn btn-success" onclick="publishQuiz()" id="publishBtn" disabled>🚀 Опубликовать</button>
-                <div class="import-export">
-                    <button class="btn btn-outline btn-sm" onclick="exportQuiz()" id="exportBtn" disabled>⬇️ Экспорт</button>
-                    <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">⬆️ Импорт</button>
-                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importQuiz(event)">
-                </div>
-            </div>
+            <!-- Панель инструментов конструктора -->
+            <div class="constructor-toolbar" id="constructorToolbar" aria-label="Панель инструментов конструктора"></div>
+            <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importQuiz(event)">
 
             <!-- Двухколоночный layout -->
-            <div class="constructor-layout">
-                <!-- ЛЕВАЯ КОЛОНКА -->
-                <div class="sidebar constructor-side-panel">
-                    <div class="card quiz-info-card">
-                        <h3 id="currentQuizTitle">Квиз не выбран</h3>
-                        <p class="text-secondary" id="currentQuizDesc"></p>
-                        <div class="outline-actions mt-3">
-                            <button class="btn btn-primary btn-sm" onclick="addQuizElement('QUESTION')">Вопрос</button>
-                            <button class="btn btn-outline btn-sm" onclick="addQuizElement('INFO_SLIDE')">Инфо</button>
-                            <button class="btn btn-outline btn-sm" onclick="addQuizElement('GAME_ROUND')">Раунд</button>
+            <div class="constructor-layout studio-layout">
+                <!-- ЛЕВАЯ КОЛОНКА: OUTLINE -->
+                <aside class="constructor-outline">
+                    <div class="outline-header">
+                        <div>
+                            <div class="page-kicker">Структура</div>
+                            <h3 id="currentQuizTitle">Квиз не выбран</h3>
+                            <p class="text-secondary" id="currentQuizDesc"></p>
                         </div>
-                        <div class="questions-list" id="questionsList">
-                            <div class="empty-state">Нет вопросов</div>
-                        </div>
-                        <div class="mt-3">
-                            <button class="btn btn-outline btn-sm w-full" onclick="saveQuizOrder()">💾 Сохранить порядок</button>
-                        </div>
+                        <button class="btn btn-outline btn-xs" onclick="saveQuizOrder()" data-requires-quiz="true" disabled>💾</button>
                     </div>
-                </div>
+                    <div class="outline-actions">
+                        <button class="btn btn-primary btn-sm" onclick="addQuizElement('QUESTION')">+ Вопрос</button>
+                        <button class="btn btn-outline btn-sm" onclick="addQuizElement('INFO_SLIDE')">+ Инфо</button>
+                        <button class="btn btn-outline btn-sm" onclick="addQuizElement('ROUND_INTRO')">+ Интро</button>
+                        <button class="btn btn-outline btn-sm" onclick="addQuizElement('GAME_ROUND')">+ Раунд</button>
+                    </div>
+                    <div class="questions-list outline-list" id="questionsList">
+                        <div class="empty-state">Нет элементов</div>
+                    </div>
+                </aside>
 
-                <!-- ЦЕНТР: LIVE PREVIEW -->
-                <main class="question-editor studio-preview-panel" id="questionEditor">
+                <!-- ЦЕНТР: STUDIO PREVIEW -->
+                <main class="studio-preview-panel" id="questionEditor">
                     <div class="editor-placeholder" id="editorPlaceholder">
                         <p>Выберите элемент слева или добавьте вопрос, инфо-слайд или игровой раунд.</p>
                     </div>
                     <div id="editorContent" class="studio-editor-content" style="display: none;">
                         <div class="studio-canvas-toolbar">
                             <div>
-                                <div class="page-kicker" id="previewModeLabel">Question</div>
+                                <div class="page-kicker" id="previewModeLabel">Элемент</div>
                                 <h3 id="previewElementTitle">Рабочее полотно</h3>
                             </div>
                             <div class="d-flex gap-1">
-                                <button class="btn btn-primary btn-sm" onclick="saveCurrentQuestion()">Сохранить</button>
-                                <button class="btn btn-outline btn-sm" onclick="deleteCurrentQuestion()">Удалить</button>
+                                <button class="btn btn-primary btn-sm" onclick="saveCurrentQuestion()" data-requires-question="true" disabled>Сохранить</button>
+                                <button class="btn btn-outline btn-sm" onclick="deleteCurrentQuestion()" data-requires-question="true" disabled>Удалить</button>
                             </div>
                         </div>
                         <section class="slide-canvas" id="slideCanvas">
                             <div class="slide-media-layer" id="previewMediaLayer"></div>
                             <div class="slide-content-layer">
-                                <div class="slide-mode-pill" id="previewTypeBadge">Everyone Answers</div>
+                                <div class="slide-mode-pill" id="previewTypeBadge">Все отвечают</div>
                                 <div class="slide-subtitle" id="previewSubtitle" contenteditable="true" data-placeholder="Подзаголовок или подсказка" oninput="updatePreviewField('questionSubtitle', this.textContent)"></div>
                                 <h2 id="previewQuestionText" contenteditable="true" data-placeholder="Введите текст вопроса" oninput="updatePreviewField('questionText', this.textContent)">Введите текст вопроса</h2>
                                 <div id="previewSpecialLayout"></div>
@@ -124,111 +119,197 @@
                         </section>
                     </div>
                 </main>
-                <aside class="constructor-settings-panel card">
-                    <div class="page-kicker">Свойства элемента</div>
-                    <h3>Content</h3>
-                    <p class="text-secondary">Тип выбирается на уровне вопроса или раунда.</p>
-                    <div class="form-group">
-                        <label class="form-label">Тип / режим</label>
-                        <select class="input" id="questionTypeSelect" onchange="setQuestionType(this.value)"></select>
+
+                <!-- ПРАВАЯ КОЛОНКА: PROPERTIES -->
+                <aside class="constructor-settings-panel">
+                    <div class="panel-header">
+                        <div class="page-kicker">Свойства</div>
+                        <p class="text-secondary">Редактируйте свойства элемента, режим и медиа.</p>
                     </div>
-                    <div class="type-selector" id="questionTypeSelector"></div>
-                    <div class="form-group">
-                        <label class="form-label">Текст вопроса</label>
-                        <textarea class="input" id="questionText" rows="3" oninput="syncPreviewFromProperties()"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Подзаголовок / подсказка</label>
-                        <input class="input" id="questionSubtitle" oninput="syncPreviewFromProperties()" placeholder="Например: выберите один ответ">
-                    </div>
-                    <div id="answersSection"></div>
-                    <div id="trueFalseSection"></div>
-                    <h3 class="mt-3">Media</h3>
-                    <div class="grid-2">
+
+                    <section class="panel-section" data-panel-section="content" id="contentSection">
+                        <h3>Контент</h3>
                         <div class="form-group">
-                            <label class="form-label">Фон</label>
-                            <input class="input" id="backgroundColor" type="color" value="#f6f8fb" oninput="syncPreviewFromProperties()">
+                            <label class="form-label">Тип / режим</label>
+                            <select class="input" id="questionTypeSelect" onchange="setQuestionType(this.value)"></select>
+                        </div>
+                        <div class="type-selector" id="questionTypeSelector"></div>
+                        <div class="form-group">
+                            <label class="form-label">Текст</label>
+                            <textarea class="input" id="questionText" rows="3" oninput="syncPreviewFromProperties()"></textarea>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Фон URL</label>
-                            <input class="input" id="backgroundImageUrl" placeholder="/uploads/bg.jpg" oninput="syncPreviewFromProperties()">
+                            <label class="form-label">Подзаголовок</label>
+                            <input class="input" id="questionSubtitle" oninput="syncPreviewFromProperties()" placeholder="Например: выберите один ответ">
                         </div>
-                    </div>
-                    <div id="mediaUploadSection"></div>
-                    <h3 class="mt-3">Scoring</h3>
-                    <div class="grid-2">
+                        <div id="answersSection"></div>
+                        <div id="trueFalseSection"></div>
+                    </section>
+
+                    <section class="panel-section" data-panel-section="media" id="mediaSection">
+                        <h3>Медиа</h3>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Фон</label>
+                                <input class="input" id="backgroundColor" type="color" value="#f6f8fb" oninput="syncPreviewFromProperties()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Фон URL</label>
+                                <input class="input" id="backgroundImageUrl" placeholder="/uploads/bg.jpg" oninput="syncPreviewFromProperties()">
+                            </div>
+                        </div>
+                        <div id="mediaUploadSection"></div>
+                    </section>
+
+                    <section class="panel-section" data-panel-section="appearance" id="appearanceSection">
+                        <h3>Оформление</h3>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Цвет вопроса</label>
+                                <input class="input" id="titleColor" type="color" value="#111827" oninput="syncPreviewFromProperties()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Цвет ответов</label>
+                                <input class="input" id="answerColor" type="color" value="#111827" oninput="syncPreviewFromProperties()">
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Размер вопроса</label>
+                                <input type="range" class="input" id="titleSize" min="28" max="76" value="48" oninput="syncPreviewFromProperties()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Размер ответов</label>
+                                <input type="range" class="input" id="answerSize" min="14" max="34" value="18" oninput="syncPreviewFromProperties()">
+                            </div>
+                        </div>
                         <div class="form-group">
-                            <label class="form-label">Баллы</label>
-                            <input type="number" class="input" id="questionPoints" value="100" min="0" oninput="syncPreviewFromProperties()">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Очки в начале</label>
-                            <input type="number" class="input" id="pointsAtStart" value="100" min="0" oninput="syncPreviewFromProperties()">
-                        </div>
-                    </div>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Очки в конце</label>
-                            <input type="number" class="input" id="pointsAtEnd" value="100" min="0" oninput="syncPreviewFromProperties()">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Штраф</label>
-                            <input type="number" class="input" id="penaltyPoints" value="0" min="0">
-                        </div>
-                    </div>
-                    <input type="hidden" id="penaltyNoAnswer" value="0">
-                    <div class="form-group">
-                        <label class="form-label">Бонусы / wager</label>
-                        <div class="d-flex gap-2">
-                            <input type="number" class="input" id="speedBonus1" placeholder="1 место" value="0" min="0">
-                            <input type="number" class="input" id="speedBonus2" placeholder="2 место" value="0" min="0">
-                            <input type="number" class="input" id="speedBonus3" placeholder="3 место" value="0" min="0">
-                        </div>
-                    </div>
-                    <h3 class="mt-3">Timing</h3>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Время</label>
-                            <input type="number" class="input" id="questionTime" value="30" min="0" oninput="syncPreviewFromProperties()">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Таймер</label>
-                            <select class="input" id="countdownMode">
-                                <option value="auto">Автоматический</option>
-                                <option value="manual">Ручной</option>
+                            <label class="form-label">Расположение</label>
+                            <select class="input" id="answerLayout" onchange="syncPreviewFromProperties()">
+                                <option value="grid-2">2 колонки</option>
+                                <option value="list">Список справа</option>
+                                <option value="bottom">Ответы снизу</option>
+                                <option value="split-media">Медиа слева, ответы справа</option>
                             </select>
                         </div>
-                    </div>
-                    <h3 class="mt-3">Host / Notes</h3>
-                    <div class="form-group">
-                        <label class="form-label">Заметки ведущего</label>
-                        <textarea class="input" id="questionNotes" rows="2" placeholder="Подсказки, факты, ремарки"></textarea>
-                    </div>
-                    <h3 class="mt-3">Advanced</h3>
-                    <div class="content-stack gap-1">
-                        <label class="form-checkbox"><input type="checkbox" id="autoJudge" checked> Автоматическое судейство</label>
-                        <label class="form-checkbox"><input type="checkbox" id="lockoutOnWrong" checked> Lockout после ошибки / buzzer</label>
-                        <label class="form-checkbox"><input type="checkbox" id="showCorrectAnswer" checked> Показывать правильный ответ</label>
-                        <label class="form-checkbox"><input type="checkbox" id="jokersEnabled" checked> Джокеры / подсказки</label>
-                    </div>
-                    <div class="grid-2 mt-3">
+                    </section>
+
+                    <section class="panel-section template-panel-section" data-panel-section="templates" id="templatesSection">
+                        <h3>Шаблоны</h3>
+                        <input type="hidden" id="questionTemplate" value="classic">
+                        <div class="template-gallery" id="questionTemplateGallery">
+                            <button type="button" class="template-tile active" data-template="classic" onclick="selectQuestionTemplate('classic')">
+                                <span class="template-preview classic"><i></i><b></b><b></b></span>
+                                <strong>Классика</strong>
+                            </button>
+                            <button type="button" class="template-tile" data-template="media-left" onclick="selectQuestionTemplate('media-left')">
+                                <span class="template-preview media-left"><i></i><b></b><b></b></span>
+                                <strong>Медиа слева</strong>
+                            </button>
+                            <button type="button" class="template-tile" data-template="answers-right" onclick="selectQuestionTemplate('answers-right')">
+                                <span class="template-preview answers-right"><i></i><b></b><b></b></span>
+                                <strong>Ответы справа</strong>
+                            </button>
+                            <button type="button" class="template-tile" data-template="big-question" onclick="selectQuestionTemplate('big-question')">
+                                <span class="template-preview big-question"><i></i><b></b><b></b></span>
+                                <strong>Большой вопрос</strong>
+                            </button>
+                            <button type="button" class="template-tile" data-template="media-grid" onclick="selectQuestionTemplate('media-grid')">
+                                <span class="template-preview media-grid"><i></i><b></b><b></b></span>
+                                <strong>Медиа-решётка</strong>
+                            </button>
+                            <button type="button" class="template-tile" data-template="poll" onclick="selectQuestionTemplate('poll')">
+                                <span class="template-preview poll"><i></i><b></b><b></b></span>
+                                <strong>Опрос</strong>
+                            </button>
+                        </div>
+                    </section>
+
+                    <section class="panel-section" data-panel-section="scoring" id="scoringSection">
+                        <h3>Скоринг</h3>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Баллы</label>
+                                <input type="number" class="input" id="questionPoints" value="100" min="0" oninput="syncPreviewFromProperties()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Очки в начале</label>
+                                <input type="number" class="input" id="pointsAtStart" value="100" min="0" oninput="syncPreviewFromProperties()">
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Очки в конце</label>
+                                <input type="number" class="input" id="pointsAtEnd" value="100" min="0" oninput="syncPreviewFromProperties()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Штраф</label>
+                                <input type="number" class="input" id="penaltyPoints" value="0" min="0" oninput="syncPreviewFromProperties()">
+                            </div>
+                        </div>
+                        <input type="hidden" id="penaltyNoAnswer" value="0">
                         <div class="form-group">
-                            <label class="form-label">Группа</label>
-                            <input type="text" class="input" id="demographicGroup" placeholder="Например: мужчины">
+                            <label class="form-label">Бонусы / wager</label>
+                            <div class="d-flex gap-2">
+                                <input type="number" class="input" id="speedBonus1" placeholder="1 место" value="0" min="0" oninput="syncPreviewFromProperties()">
+                                <input type="number" class="input" id="speedBonus2" placeholder="2 место" value="0" min="0" oninput="syncPreviewFromProperties()">
+                                <input type="number" class="input" id="speedBonus3" placeholder="3 место" value="0" min="0" oninput="syncPreviewFromProperties()">
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="panel-section" data-panel-section="timing" id="timingSection">
+                        <h3>Тайминг</h3>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Время</label>
+                                <input type="number" class="input" id="questionTime" value="30" min="0" oninput="syncPreviewFromProperties()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Таймер</label>
+                                <select class="input" id="countdownMode" onchange="syncPreviewFromProperties()">
+                                    <option value="auto">Автоматический</option>
+                                    <option value="manual">Ручной</option>
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="panel-section" data-panel-section="host-notes" id="hostNotesSection">
+                        <h3>Заметки ведущего</h3>
+                        <div class="form-group">
+                            <label class="form-label">Заметки ведущего</label>
+                            <textarea class="input" id="questionNotes" rows="2" placeholder="Подсказки, факты, ремарки" oninput="syncPreviewFromProperties()"></textarea>
+                        </div>
+                    </section>
+
+                    <section class="panel-section" data-panel-section="advanced" id="advancedSection">
+                        <h3>Дополнительно</h3>
+                        <div class="content-stack gap-1">
+                            <label class="form-checkbox"><input type="checkbox" id="autoJudge" checked onchange="syncPreviewFromProperties()"> Автоматическое судейство</label>
+                            <label class="form-checkbox"><input type="checkbox" id="lockoutOnWrong" checked onchange="syncPreviewFromProperties()"> Lockout после ошибки / buzzer</label>
+                            <label class="form-checkbox"><input type="checkbox" id="showCorrectAnswer" checked onchange="syncPreviewFromProperties()"> Показывать правильный ответ</label>
+                            <label class="form-checkbox"><input type="checkbox" id="jokersEnabled" checked onchange="syncPreviewFromProperties()"> Джокеры / подсказки</label>
+                        </div>
+                        <div class="grid-2 mt-3">
+                            <div class="form-group">
+                                <label class="form-label">Группа</label>
+                                <input type="text" class="input" id="demographicGroup" placeholder="Например: мужчины" oninput="syncPreviewFromProperties()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Ветвление</label>
+                                <input type="text" class="input" id="slideRouting" placeholder="ID следующего слайда" oninput="syncPreviewFromProperties()">
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Ветвление</label>
-                            <input type="text" class="input" id="slideRouting" placeholder="ID следующего слайда">
+                            <label class="form-label">Анимация текста</label>
+                            <select class="input" id="textReveal" onchange="syncPreviewFromProperties()">
+                                <option value="none">Без анимации</option>
+                                <option value="letter">По буквам</option>
+                                <option value="word">По словам</option>
+                            </select>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Анимация текста</label>
-                        <select class="input" id="textReveal">
-                            <option value="none">Без анимации</option>
-                            <option value="letter">По буквам</option>
-                            <option value="word">По словам</option>
-                        </select>
-                    </div>
+                    </section>
                 </aside>
             </div>
         </div>
@@ -259,58 +340,100 @@
     <!-- Компоненты конструктора -->
     <script src="/js/components/question-editor.js"></script>
     <script src="/js/components/question-list.js"></script>
-
-    <!-- UI и логика -->
-    <script src="/js/constructor-ui.js"></script>
-    <script src="/js/quiz-constructor.js"></script>
-    
-    <!-- Инициализация -->
-    <script>
-        // Определяем недостающие функции-заглушки
+    <script src="/js/services/quiz.service.js"></script>
         window.showCreateQuizModal = function() { showModal('createQuizModal'); };
         window.showAIGenerator = function() { showModal('aiGeneratorModal'); };
-        window.previewQuiz = function() { 
-            if (currentQuiz) {
-                showModal('previewModal');
-                // Здесь логика предпросмотра
-            } else {
-                showToast('Сначала выберите или создайте квиз', 'error');
+        window.previewQuiz = function() {
+            if (!currentQuiz) {
+                showToast('Сначала откройте квиз', 'error');
+                return;
             }
+            showModal('previewModal');
+            const node = document.getElementById('previewContent');
+            if (!node) return;
+            node.innerHTML = (questions || []).map((question, index) => `
+                <div class="card mb-2">
+                    <strong>${index + 1}. ${escapeHtml(question.text || 'Без текста')}</strong>
+                    <p class="text-secondary">${escapeHtml(question.gameMode || question.type || 'QUESTION')}</p>
+                </div>
+            `).join('') || '<div class="empty-state">В квизе пока нет элементов</div>';
         };
         window.publishQuiz = async function() {
             if (!currentQuiz) return;
             try {
-                const response = await QuizAPI.update(currentQuiz.id, { isPublished: true });
+                const response = await QuizService.update(currentQuiz.id, { isPublished: true });
                 if (response.quiz) {
                     currentQuiz.isPublished = true;
-                    showToast('✅ Квиз опубликован!', 'success');
+                    showToast('✅ Викторина опубликована!', 'success');
                 }
             } catch (error) {
                 showToast('Ошибка публикации', 'error');
             }
         };
         window.exportQuiz = function() {
-            if (currentQuiz) QuizAPI.exportQuiz(currentQuiz.id);
+            if (!currentQuiz) {
+                showToast('Сначала откройте квиз', 'error');
+                return;
+            }
+            const payload = {
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                quiz: currentQuiz,
+                questions: questions || [],
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${(currentQuiz.title || 'quiz').replace(/[^
+\wа-яё-]+/gi, '_')}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
         };
         window.importQuiz = async function(event) {
             const file = event.target.files[0];
             if (!file) return;
             try {
-                await QuizAPI.importQuiz(file);
-                showToast('✅ Импортирован', 'success');
-                loadMyQuizzes();
+                const text = await file.text();
+                const data = JSON.parse(text);
+                const sourceQuiz = data.quiz || data;
+                const sourceQuestions = data.questions || sourceQuiz.questions || [];
+                const created = await createNewQuiz({
+                    title: sourceQuiz.title || 'Импортированная викторина',
+                    description: sourceQuiz.description || '',
+                    thumbnailUrl: sourceQuiz.thumbnailUrl || '',
+                });
+                if (!created.success) throw new Error(created.error);
+                for (const question of sourceQuestions) {
+                    const copy = { ...question };
+                    delete copy.id;
+                    delete copy.quizId;
+                    copy.answers = (copy.answers || []).map((answer) => {
+                        const next = { ...answer };
+                        delete next.id;
+                        delete next.questionId;
+                        return next;
+                    });
+                    await QuestionService.create(created.quiz.id, copy);
+                }
+                showToast('Импорт завершён', 'success');
+                await selectQuiz(created.quiz.id);
             } catch (error) {
-                showToast('Ошибка импорта', 'error');
+                showToast(error.message || 'Ошибка импорта', 'error');
             }
             event.target.value = '';
         };
-        window.saveQuizOrder = async function() {
+        if (typeof window.saveQuizOrder !== 'function') window.saveQuizOrder = async function() {
             if (!currentQuiz || !questions.length) return;
             const questionIds = questions.filter(q => q.id).map(q => q.id);
-            await QuizAPI.reorderQuestions(currentQuiz.id, questionIds);
+            await QuizService.reorderQuestions(currentQuiz.id, questionIds);
             showToast('✅ Порядок сохранён', 'success');
         };
         window.cancelEdit = function() {
+            if (typeof resetEditor === 'function') {
+                resetEditor();
+                return;
+            }
             document.getElementById('editorPlaceholder').style.display = 'block';
             document.getElementById('editorContent').style.display = 'none';
             currentQuestionIndex = -1;
@@ -319,6 +442,20 @@
             const panel = document.getElementById('advancedSettingsPanel');
             if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
         };
+                }
+                showToast('Импорт завершён', 'success');
+                await selectQuiz(created.quiz.id);
+            } catch (error) {
+                showToast(error.message || 'Ошибка импорта', 'error');
+            }
+            event.target.value = '';
+        };
+
+        if (typeof window.generateQuizAI !== 'function') {
+            window.generateQuizAI = function() {
+                showToast('ИИ-генератор пока не подключён к backend', 'info');
+            };
+        }
 
         document.addEventListener('DOMContentLoaded', async function() {
     Navigation.render('app-navigation', { currentPage: 'constructor' });

@@ -9,6 +9,7 @@ const { asyncHandler } = require('../utils/async-handler');
 const router = express.Router();
 
 router.get('/', authenticateToken, asyncHandler(quizController.list));
+router.get('/library', authenticateToken, asyncHandler(quizController.library));
 router.get('/:id', authenticateToken, asyncHandler(quizController.getById));
 router.post('/', authenticateToken, asyncHandler(quizController.create));
 router.put('/:id', authenticateToken, asyncHandler(quizController.update));

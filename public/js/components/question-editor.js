@@ -16,7 +16,7 @@ const QuestionEditorComponent = {
     }
 
     this.showEditorContent();
-    this.applyQuestionTypeUI(question.type);
+    this.applyQuestionTypeUI(question.gameMode || question.type);
     this.populateQuestionForm(question);
     this.renderAnswersEditor(question.answers);
     this.syncMediaPreview(question);
@@ -97,7 +97,7 @@ const QuestionEditorComponent = {
       'questionSubtitle': question.subtitle,
       'questionPoints': question.points,
       'questionTime': question.timeLimit,
-      'questionTypeSelect': question.type,
+      'questionTypeSelect': question.gameMode || question.type,
       'backgroundColor': question.backgroundColor || '#f6f8fb',
       'backgroundImageUrl': question.backgroundImageUrl,
       'pointsAtStart': question.pointsAtStart,
@@ -126,7 +126,7 @@ const QuestionEditorComponent = {
     });
 
     // Special case for true/false
-    if (question.type === 'TRUEFALSE' || question.type === 'TRUE_FALSE') {
+    if ((question.gameMode || question.type) === 'TRUEFALSE' || (question.gameMode || question.type) === 'TRUE_FALSE') {
       const select = document.getElementById('trueFalseSelect');
       if (select) {
         const correctAnswer = question.answers?.find(a => a.isCorrect);
@@ -169,7 +169,8 @@ const QuestionEditorComponent = {
    */
   renderQuestionSpecificInputs(question) {
     // Можно расширить для других типов
-    if (question.type === 'TRUEFALSE' || question.type === 'TRUE_FALSE') {
+    const mode = question.gameMode || question.type;
+    if (mode === 'TRUEFALSE' || mode === 'TRUE_FALSE') {
       this.updateTrueFalseUI(question);
     }
   },
@@ -197,28 +198,43 @@ const QuestionEditorComponent = {
       return;
     }
 
-    const type = question.type || 'EVERYONE_ANSWERS';
+    const type = question.gameMode || question.type || 'EVERYONE_ANSWERS';
+    const elementType = question.elementType || question.layoutType || 'QUESTION';
+    const config = this.parseConfig(question);
+    const appearance = config.appearance || {};
     const typeLabel = this.getQuestionTypeLabel(type);
     canvas.dataset.mode = type;
+    canvas.dataset.elementType = elementType;
+    canvas.dataset.template = appearance.template || 'classic';
+    canvas.dataset.answerLayout = appearance.answerLayout || 'grid-2';
     canvas.style.backgroundColor = question.backgroundColor || '#f6f8fb';
     canvas.style.backgroundImage = question.backgroundImageUrl ? `url("${question.backgroundImageUrl}")` : 'none';
+    canvas.style.setProperty('--studio-title-color', appearance.titleColor || '#111827');
+    canvas.style.setProperty('--studio-answer-color', appearance.answerColor || '#111827');
+    canvas.style.setProperty('--studio-title-size', `${appearance.titleSize || 48}px`);
+    canvas.style.setProperty('--studio-answer-size', `${appearance.answerSize || 18}px`);
 
     title.textContent = question.text || 'Введите текст вопроса';
     if (subtitle) subtitle.textContent = question.subtitle || '';
     if (typeBadge) typeBadge.textContent = typeLabel;
-    if (modeLabel) modeLabel.textContent = question.layoutType || 'QUESTION';
-    if (elementTitle) elementTitle.textContent = typeLabel;
+    if (modeLabel) modeLabel.textContent = elementType;
+    if (elementTitle) elementTitle.textContent = `${typeLabel} - ${elementType}`;
     if (timer) timer.textContent = `${question.timeLimit || 30} сек`;
     if (points) points.textContent = `${question.points || 100} очков`;
     if (mediaLayer) mediaLayer.innerHTML = this.renderPreviewMedia(question);
     if (special) special.innerHTML = this.renderSpecialLayout(question);
 
     const answers = Array.isArray(question.answers) ? question.answers : [];
-    answersGrid.style.display = ['INFO_SLIDE', 'ROUND_INTRO', 'JEOPARDY_ROUND'].includes(type) ? 'none' : 'grid';
-    answersGrid.innerHTML = answers.map((answer, index) => `
+    const hideAnswers = ['INFO_SLIDE', 'ROUND_INTRO', 'JEOPARDY_ROUND'].includes(type);
+    answersGrid.style.display = hideAnswers ? 'none' : 'grid';
+    answersGrid.innerHTML = hideAnswers ? '' : answers.map((answer, index) => `
       <button class="preview-answer ${answer.isCorrect ? 'correct' : ''}" type="button">
         <span>${String.fromCharCode(65 + index)}</span>
-        <strong contenteditable="true" oninput="updateAnswerText(${index}, this.textContent); syncPreviewFromProperties()">${this.escapeHtml(answer.text || `Ответ ${index + 1}`)}</strong>
+        <strong
+          contenteditable="true"
+          data-answer-index="${index}"
+          oninput="updateAnswerText(${index}, this.textContent)"
+        >${this.escapeHtml(answer.text || `Ответ ${index + 1}`)}</strong>
       </button>
     `).join('');
   },
@@ -226,32 +242,121 @@ const QuestionEditorComponent = {
   renderPreviewMedia(question) {
     if (question.imageUrl) return `<img src="${question.imageUrl}" alt="">`;
     if (question.videoUrl) return `<video controls src="${question.videoUrl}"></video>`;
-    if (question.audioUrl) return `<div class="preview-audio-chip">Audio attached</div><audio controls src="${question.audioUrl}"></audio>`;
+    if (question.audioUrl) return `<div class="preview-audio-chip">Аудио прикреплено</div><audio controls src="${question.audioUrl}"></audio>`;
     return '';
   },
 
   renderSpecialLayout(question) {
-    const type = question.type || 'EVERYONE_ANSWERS';
+    const type = question.gameMode || question.type || 'EVERYONE_ANSWERS';
 
     if (type === 'JEOPARDY_ROUND') {
-      const categories = ['Тема 1', 'Тема 2', 'Тема 3', 'Тема 4'];
-      const values = [100, 200, 300, 400, 500];
-      return `<div class="jeopardy-grid">${categories.map((category) => `<div class="jeopardy-cell jeopardy-head">${category}</div>`).join('')}${values.flatMap((value) => categories.map(() => `<div class="jeopardy-cell">${value}</div>`)).join('')}</div>`;
+      const config = this.parseConfig(question);
+      const categories = config.categories || ['Тема 1', 'Тема 2', 'Тема 3', 'Тема 4'];
+      const values = config.values || [100, 200, 300, 400, 500];
+      return `
+        <div class="special-layout-header">
+          <span>Сетка категорий</span>
+          <span class="badge">Редактируемая</span>
+        </div>
+        <div class="jeopardy-grid">
+          ${categories.map((category, index) => `
+            <div class="jeopardy-cell jeopardy-head" contenteditable="true" oninput="QuestionEditorComponent.updateJeopardyCategory(${index}, this.textContent)">${this.escapeHtml(category)}</div>
+          `).join('')}
+          ${values.flatMap((value, valueIndex) => categories.map(() => `
+            <div class="jeopardy-cell" contenteditable="true" oninput="QuestionEditorComponent.updateJeopardyValue(${valueIndex}, this.textContent)">${this.escapeHtml(String(value))}</div>
+          `)).join('')}
+        </div>
+      `;
     }
 
     if (type === 'MILLIONAIRE_ROUND') {
-      return `<div class="millionaire-layout">${[1000000, 500000, 250000, 125000, 64000, 32000, 16000, 8000, 4000, 2000, 1000].map((value, index) => `<div class="ladder-step ${index === 0 ? 'top' : ''}">${value.toLocaleString('ru-RU')} ₽</div>`).join('')}</div>`;
+      const config = this.parseConfig(question);
+      const ladder = config.ladder || [100, 200, 400, 800, 1500, 3000, 6000, 12000, 25000, 50000, 100000, 250000, 500000, 1000000];
+      return `
+        <div class="special-layout-header">
+          <span>Лестница призов</span>
+          <span class="badge">Редактируемая</span>
+        </div>
+        <div class="millionaire-layout">
+          ${ladder.map((value, index) => `
+            <div class="ladder-step ${index === ladder.length - 1 ? 'top' : ''}" contenteditable="true" oninput="QuestionEditorComponent.updateMillionaireValue(${index}, this.textContent)">${this.escapeHtml(String(value))}</div>
+          `).join('')}
+        </div>
+      `;
     }
 
     const callouts = {
-      FASTEST_FINGER: 'Fastest response wins. Lockout is enabled for buzzer-style play.',
-      WAGER: 'Players choose a wager before answering.',
-      MAJORITY_RULES: 'Reveal popular answers one by one, Family Feud style.',
-      DECREASING_POINTS: 'Score decreases from start points to end points while time runs.',
-      LAST_MAN_STANDING: 'Wrong answers eliminate players until one remains.',
+      FASTEST_FINGER: 'Режим на скорость: игроки отвечают первыми, lockout включён.',
+      WAGER: 'Игроки делают ставку перед ответом.',
+      MAJORITY_RULES: 'Раскрывайте самые популярные ответы по одному.',
+      DECREASING_POINTS: 'Очки снижаются от стартовых к финальным по мере времени.',
+      LAST_MAN_STANDING: 'Неверный ответ исключает игрока до финала.',
     };
 
     return callouts[type] ? `<div class="mode-callout">${callouts[type]}</div>` : '';
+  },
+
+  updateJeopardyCategory(index, value) {
+    const question = this.getCurrentQuestion();
+    if (!question) return;
+    const config = this.parseConfig(question);
+    const categories = Array.isArray(config.categories) ? [...config.categories] : ['Тема 1', 'Тема 2', 'Тема 3', 'Тема 4'];
+    categories[index] = value.trim() || categories[index];
+    const updated = { ...config, categories };
+    question.configJson = JSON.stringify(updated);
+    this.pushInlineConfigUpdate(question);
+  },
+
+  updateJeopardyValue(index, value) {
+    const question = this.getCurrentQuestion();
+    if (!question) return;
+    const config = this.parseConfig(question);
+    const values = Array.isArray(config.values) ? [...config.values] : [100, 200, 300, 400, 500];
+    const parsed = parseInt(value.replace(/\D/g, ''), 10);
+    values[index] = Number.isNaN(parsed) ? values[index] : parsed;
+    const updated = { ...config, values };
+    question.configJson = JSON.stringify(updated);
+    this.pushInlineConfigUpdate(question);
+  },
+
+  updateMillionaireValue(index, value) {
+    const question = this.getCurrentQuestion();
+    if (!question) return;
+    const config = this.parseConfig(question);
+    const ladder = Array.isArray(config.ladder) ? [...config.ladder] : [100, 200, 400, 800, 1500, 3000, 6000, 12000, 25000, 50000, 100000, 250000, 500000, 1000000];
+    const parsed = parseInt(value.replace(/\D/g, ''), 10);
+    ladder[index] = Number.isNaN(parsed) ? ladder[index] : parsed;
+    const updated = { ...config, ladder };
+    question.configJson = JSON.stringify(updated);
+    this.pushInlineConfigUpdate(question);
+  },
+
+  parseConfig(question) {
+    if (!question?.configJson) return {};
+    try {
+      return typeof question.configJson === 'string'
+        ? JSON.parse(question.configJson)
+        : question.configJson;
+    } catch (error) {
+      return {};
+    }
+  },
+
+  getCurrentQuestion() {
+    if (typeof currentQuestionIndex === 'undefined' || typeof questions === 'undefined') return null;
+    return questions[currentQuestionIndex] || null;
+  },
+
+  pushInlineConfigUpdate(question) {
+    if (typeof questions !== 'undefined' && typeof currentQuestionIndex === 'number') {
+      questions[currentQuestionIndex] = question;
+    }
+    if (window.ConstructorState && typeof questions !== 'undefined') {
+      window.ConstructorState.setQuestions(questions);
+    }
+    if (typeof updateSaveStatus === 'function') {
+      updateSaveStatus('Есть несохранённые изменения', 'dirty');
+    }
   },
 
   /**
@@ -308,30 +413,6 @@ const QuestionEditorComponent = {
   clearAnswersEditor() {
     const container = document.getElementById('answersEditor');
     if (container) container.innerHTML = '';
-  },
-
-  getQuestionTypeLabel(type) {
-    const labels = {
-      EVERYONE_ANSWERS: 'Everyone Answers',
-      FASTEST_FINGER: 'Fastest Finger',
-      MULTIPLE_CORRECT: 'Multiple Correct',
-      ORDERED: 'Ordered',
-      TRUEFALSE: 'True / False',
-      TRUE_FALSE: 'True / False',
-      TEXT: 'Text',
-      IMAGE: 'Image',
-      AUDIO: 'Audio',
-      VIDEO: 'Video',
-      DECREASING_POINTS: 'Decreasing Points',
-      WAGER: 'Wager',
-      MAJORITY_RULES: 'Majority Rules',
-      LAST_MAN_STANDING: 'Last Man Standing',
-      JEOPARDY_ROUND: 'Jeopardy Round',
-      MILLIONAIRE_ROUND: 'Millionaire Round',
-      INFO_SLIDE: 'Info Slide',
-      ROUND_INTRO: 'Round Intro',
-    };
-    return labels[type] || type;
   },
 
   /**

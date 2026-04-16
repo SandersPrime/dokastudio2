@@ -34,12 +34,35 @@ const ALLOWED_LAYOUT_TYPES = new Set([
   'GAME_ROUND',
 ]);
 
+const ALLOWED_ELEMENT_TYPES = new Set([
+  'QUESTION',
+  'INFO_SLIDE',
+  'ROUND_INTRO',
+  'GAME_ROUND',
+]);
+
 function normalizeType(type) {
   const normalized = String(type || '').trim().toUpperCase();
   if (normalized === 'TRUEFALSE') return 'TRUE_FALSE';
   if (normalized === 'MULTIPLE') return 'EVERYONE_ANSWERS';
   if (normalized === 'MAJORITYRULES') return 'MAJORITY_RULES';
   return normalized;
+}
+
+function inferElementType(type, explicitElementType) {
+  const normalized = String(explicitElementType || '').trim().toUpperCase();
+
+  if (normalized) {
+    if (!ALLOWED_ELEMENT_TYPES.has(normalized)) {
+      throw createHttpError(400, `Unsupported elementType: ${normalized}`);
+    }
+    return normalized;
+  }
+
+  if (type === 'INFO_SLIDE') return 'INFO_SLIDE';
+  if (type === 'ROUND_INTRO') return 'ROUND_INTRO';
+  if (['JEOPARDY_ROUND', 'MILLIONAIRE_ROUND'].includes(type)) return 'GAME_ROUND';
+  return 'QUESTION';
 }
 
 function toOptionalString(value) {
@@ -266,7 +289,72 @@ function validateUpdateQuestionPayload(payload = {}) {
   return normalizeQuestionPayload(payload, true);
 }
 
+const STUDIO_ELEMENT_TYPES = new Set([
+  'QUESTION',
+  'INFO_SLIDE',
+  'ROUND_INTRO',
+  'GAME_ROUND',
+]);
+
+function normalizeStudioMode(mode) {
+  return normalizeType(mode || 'EVERYONE_ANSWERS');
+}
+
+function inferStudioElementType(mode, elementType) {
+  const normalizedElementType = String(elementType || '').trim().toUpperCase();
+
+  if (normalizedElementType) {
+    if (!STUDIO_ELEMENT_TYPES.has(normalizedElementType)) {
+      throw createHttpError(400, `Unsupported elementType: ${normalizedElementType}`);
+    }
+    return normalizedElementType;
+  }
+
+  if (mode === 'INFO_SLIDE') return 'INFO_SLIDE';
+  if (mode === 'ROUND_INTRO') return 'ROUND_INTRO';
+  if (['JEOPARDY_ROUND', 'MILLIONAIRE_ROUND'].includes(mode)) return 'GAME_ROUND';
+  return 'QUESTION';
+}
+
+function normalizeStudioQuestionPayload(payload = {}, isUpdate = false) {
+  const patchedPayload = { ...payload };
+  const mode = normalizeStudioMode(payload.gameMode || payload.mode || payload.type);
+
+  if (!isUpdate || payload.type !== undefined || payload.gameMode !== undefined || payload.mode !== undefined) {
+    if (!ALLOWED_TYPES.has(mode)) {
+      throw createHttpError(400, `Unsupported question mode: ${mode}`);
+    }
+
+    patchedPayload.type = mode;
+    patchedPayload.gameMode = mode;
+  }
+
+  const data = normalizeQuestionPayload(patchedPayload, isUpdate);
+
+  if (!isUpdate || payload.elementType !== undefined || payload.type !== undefined || payload.gameMode !== undefined || payload.mode !== undefined) {
+    data.elementType = inferStudioElementType(mode, payload.elementType);
+  }
+
+  if (!isUpdate || payload.layoutType !== undefined || payload.elementType !== undefined || payload.type !== undefined || payload.gameMode !== undefined || payload.mode !== undefined) {
+    data.layoutType = String(payload.layoutType || data.elementType || inferStudioElementType(mode, payload.elementType)).trim().toUpperCase();
+
+    if (!ALLOWED_LAYOUT_TYPES.has(data.layoutType)) {
+      throw createHttpError(400, `Unsupported layoutType: ${data.layoutType}`);
+    }
+  }
+
+  return data;
+}
+
+function validateCreateStudioQuestionPayload(payload = {}) {
+  return normalizeStudioQuestionPayload(payload, false);
+}
+
+function validateUpdateStudioQuestionPayload(payload = {}) {
+  return normalizeStudioQuestionPayload(payload, true);
+}
+
 module.exports = {
-  validateCreateQuestionPayload,
-  validateUpdateQuestionPayload,
+  validateCreateQuestionPayload: validateCreateStudioQuestionPayload,
+  validateUpdateQuestionPayload: validateUpdateStudioQuestionPayload,
 };

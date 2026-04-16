@@ -39,6 +39,7 @@ async function createQuestion({ quizId, currentUser, payload }) {
       quizId,
       text: data.text,
       subtitle: data.subtitle ?? null,
+      elementType: data.elementType ?? data.layoutType ?? 'QUESTION',
       type: data.type,
       layoutType: data.layoutType,
       gameMode: data.gameMode ?? data.type,
@@ -99,6 +100,7 @@ async function updateQuestion({ questionId, currentUser, payload }) {
       data: {
         text: data.text,
         subtitle: data.subtitle,
+        elementType: data.elementType,
         type: data.type,
         layoutType: data.layoutType,
         gameMode: data.gameMode,

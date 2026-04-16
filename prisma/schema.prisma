@@ -121,6 +121,7 @@ model Question {
   imageUrl          String? @map("image_url")
   audioUrl          String? @map("audio_url")
   videoUrl          String? @map("video_url")
+  elementType       String  @default("QUESTION") @map("element_type")
   type              String  @default("TEXT")
   layoutType        String  @default("QUESTION") @map("layout_type")
   gameMode          String? @map("game_mode")

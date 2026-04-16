@@ -17,15 +17,9 @@ const Modals = {
                         <label class="form-label">Описание</label>
                         <textarea class="input" id="newQuizDesc" rows="3" placeholder="О чём этот квиз?"></textarea>
                     </div>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Категория</label>
-                            <input type="text" class="input" id="newQuizCategory" maxlength="80" placeholder="Например: история">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Обложка</label>
-                            <input type="url" class="input" id="newQuizThumbnailUrl" placeholder="https://... или /uploads/...">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Обложка</label>
+                        <input type="url" class="input" id="newQuizThumbnailUrl" placeholder="https://... или /uploads/...">
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary" onclick="createQuiz()">Создать</button>

@@ -11,6 +11,14 @@ async function list(req, res) {
   return res.json(result);
 }
 
+async function library(req, res) {
+  const result = await quizService.getQuizLibrary({
+    currentUser: req.user,
+  });
+
+  return res.json(result);
+}
+
 async function getById(req, res) {
   const result = await quizService.getQuizById({
     quizId: req.params.id,
@@ -60,6 +68,7 @@ async function reorderQuestions(req, res) {
 
 module.exports = {
   list,
+  library,
   getById,
   create,
   update,

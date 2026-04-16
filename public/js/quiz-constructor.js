@@ -3,17 +3,65 @@
 // Управление состоянием перенесено в public/js/state/constructor.state.js
 // Остается для обратной совместимости
 let sortableInstance = null;
+var currentQuiz = window.currentQuiz || null;
+var questions = Array.isArray(window.questions) ? window.questions : [];
+var currentQuestionIndex = Number.isInteger(window.currentQuestionIndex) ? window.currentQuestionIndex : -1;
+
+function syncLegacyGlobalsFromState() {
+    if (!window.ConstructorState) {
+        window.currentQuiz = currentQuiz;
+        window.questions = questions;
+        window.currentQuestionIndex = currentQuestionIndex;
+        return;
+    }
+
+    const state = ConstructorState.getState();
+    currentQuiz = state.currentQuiz || currentQuiz || window.currentQuiz || null;
+    questions = Array.isArray(state.questions) && state.questions.length
+        ? state.questions
+        : (Array.isArray(questions) ? questions : []);
+    currentQuestionIndex = Number.isInteger(state.currentQuestionIndex)
+        ? state.currentQuestionIndex
+        : currentQuestionIndex;
+
+    window.currentQuiz = currentQuiz;
+    window.questions = questions;
+    window.currentQuestionIndex = currentQuestionIndex;
+}
+
+function syncStateFromLegacyGlobals(markDirty = true) {
+    window.currentQuiz = currentQuiz;
+    window.questions = questions;
+    window.currentQuestionIndex = currentQuestionIndex;
+
+    if (!window.ConstructorState) return;
+
+    ConstructorState.setCurrentQuiz(currentQuiz);
+    if (markDirty) {
+        ConstructorState.setQuestions(questions);
+    }
+    ConstructorState.setCurrentQuestionIndex(currentQuestionIndex);
+}
+
+function getActiveQuiz() {
+    const stateQuiz = window.ConstructorState?.getState?.().currentQuiz || null;
+    currentQuiz = currentQuiz || window.currentQuiz || stateQuiz || null;
+    window.currentQuiz = currentQuiz;
+    return currentQuiz;
+}
 
 const STUDIO_MODE_DEFAULTS = {
-    QUESTION: { type: 'EVERYONE_ANSWERS', layoutType: 'QUESTION', text: 'Новый вопрос' },
-    INFO_SLIDE: { type: 'INFO_SLIDE', layoutType: 'INFO_SLIDE', text: 'Информационный слайд' },
-    ROUND_INTRO: { type: 'ROUND_INTRO', layoutType: 'ROUND_INTRO', text: 'Новый раунд' },
-    GAME_ROUND: { type: 'JEOPARDY_ROUND', layoutType: 'GAME_ROUND', text: 'Игровой раунд' },
+    QUESTION: { elementType: 'QUESTION', mode: 'EVERYONE_ANSWERS', layoutType: 'QUESTION', text: 'Новый вопрос' },
+    INFO_SLIDE: { elementType: 'INFO_SLIDE', mode: 'INFO_SLIDE', layoutType: 'INFO_SLIDE', text: 'Информационный слайд' },
+    ROUND_INTRO: { elementType: 'ROUND_INTRO', mode: 'ROUND_INTRO', layoutType: 'ROUND_INTRO', text: 'Новый раунд' },
+    GAME_ROUND: { elementType: 'GAME_ROUND', mode: 'JEOPARDY_ROUND', layoutType: 'GAME_ROUND', text: 'Игровой раунд' },
 };
 
 // Оркестрирует всю логику конструктора
 
 function initConstructor() {
+    syncLegacyGlobalsFromState();
+
     const authSection = document.getElementById('authSection');
     const appSection = document.getElementById('appSection');
     const logoutBtn = document.getElementById('logoutBtn');
@@ -27,6 +75,8 @@ function initConstructor() {
     }
 
     updateSaveStatus('Готов к работе');
+    updateConstructorAvailability();
+    openQuizFromQuery();
 }
 
 function updateSaveStatus(message, state = 'idle') {
@@ -34,6 +84,29 @@ function updateSaveStatus(message, state = 'idle') {
     if (!node) return;
     node.textContent = message;
     node.dataset.state = state;
+    const ribbonMirror = document.getElementById('ribbonSaveStatusMirror');
+    if (ribbonMirror) {
+        ribbonMirror.textContent = message;
+        ribbonMirror.dataset.state = state;
+    }
+}
+
+function updateConstructorAvailability() {
+    syncLegacyGlobalsFromState();
+
+    const hasQuiz = Boolean(getActiveQuiz());
+    document.querySelectorAll('[data-requires-quiz="true"]').forEach((node) => {
+        node.disabled = !hasQuiz;
+        node.classList.toggle('is-disabled', !hasQuiz);
+    });
+
+    document.querySelectorAll('[data-requires-question="true"]').forEach((node) => {
+        const disabled = currentQuestionIndex < 0 || !questions[currentQuestionIndex];
+        node.disabled = disabled;
+        node.classList.toggle('is-disabled', disabled);
+    });
+
+    window.DokaRibbon?.refresh?.();
 }
 
 async function createNewQuiz(titleOrPayload, description = '') {
@@ -56,6 +129,7 @@ async function createNewQuiz(titleOrPayload, description = '') {
         renderQuestionsList();
         enableQuizActions();
         resetEditor();
+        updateConstructorAvailability();
         updateSaveStatus('Квиз создан', 'saved');
 
         return { success: true, quiz: response.quiz };
@@ -65,6 +139,19 @@ async function createNewQuiz(titleOrPayload, description = '') {
 }
 
 async function loadMyQuizzes() {
+    window.location.href = '/my-quizzes.html';
+}
+
+function openQuizFromQuery() {
+    const quizId = new URLSearchParams(window.location.search).get('quizId');
+    if (!quizId) return;
+
+    selectQuiz(quizId).catch((error) => {
+        showToast(error.message || 'Ошибка загрузки квиза', 'error');
+    });
+}
+
+async function loadMyQuizzesLegacyModal() {
     try {
         const response = await QuizService.getAll({
             authorId: currentUser.id,
@@ -94,6 +181,7 @@ async function selectQuiz(quizId) {
         renderQuestionsList();
         enableQuizActions();
         resetEditor();
+        updateConstructorAvailability();
         closeModal('quizzesListModal');
         updateSaveStatus('Квиз загружен', 'saved');
 
@@ -164,7 +252,6 @@ function getQuizCreatePayloadFromModal() {
     return {
         title: document.getElementById('newQuizTitle')?.value?.trim() || '',
         description: document.getElementById('newQuizDesc')?.value?.trim() || '',
-        category: document.getElementById('newQuizCategory')?.value?.trim() || '',
         thumbnailUrl: document.getElementById('newQuizThumbnailUrl')?.value?.trim() || '',
     };
 }
@@ -267,6 +354,7 @@ async function deleteQuizById(quizId) {
             renderQuestionsList();
             resetEditor();
             enableQuizActions();
+            updateConstructorAvailability();
         }
 
         showToast('Квиз удалён', 'success');
@@ -277,7 +365,10 @@ async function deleteQuizById(quizId) {
 }
 
 function renderQuestionsList() {
-    window.renderQuestionsList(questions, currentQuestionIndex, 'editQuestion');
+    syncLegacyGlobalsFromState();
+    if (window.QuestionListComponent?.renderQuestionsList) {
+        window.QuestionListComponent.renderQuestionsList(questions, currentQuestionIndex, 'editQuestion');
+    }
     initDragAndDrop();
 }
 
@@ -341,20 +432,24 @@ async function saveQuizOrder() {
 }
 
 function createDefaultQuestion(kind = 'QUESTION') {
+    syncLegacyGlobalsFromState();
     const mode = STUDIO_MODE_DEFAULTS[kind] || STUDIO_MODE_DEFAULTS.QUESTION;
+    const isAnswerless = ['INFO_SLIDE', 'ROUND_INTRO', 'JEOPARDY_ROUND'].includes(mode.mode);
+    const stateQuestionCount = window.ConstructorState?.getState?.().questions?.length;
     return {
         tempId: generateTempId(),
         text: mode.text,
         subtitle: '',
-        type: mode.type,
+        elementType: mode.elementType,
+        type: mode.mode,
         layoutType: mode.layoutType,
-        gameMode: mode.type,
+        gameMode: mode.mode,
         backgroundColor: '#f6f8fb',
         backgroundImageUrl: null,
-        configJson: JSON.stringify({ mode: mode.type }),
+        configJson: JSON.stringify(getDefaultModeConfig(mode.mode, mode.elementType)),
         points: 100,
         timeLimit: 30,
-        order: ConstructorState.getState().questions.length,
+        order: Number.isInteger(stateQuestionCount) ? stateQuestionCount : questions.length,
         pointsAtStart: 100,
         pointsAtEnd: 100,
         penaltyPoints: 0,
@@ -374,11 +469,32 @@ function createDefaultQuestion(kind = 'QUESTION') {
         imageUrl: null,
         audioUrl: null,
         videoUrl: null,
-        answers: [
+        answers: isAnswerless ? [] : [
             { text: 'Правильный ответ', isCorrect: true, order: 0 },
             { text: 'Неправильный ответ', isCorrect: false, order: 1 },
         ],
     };
+}
+
+function getDefaultModeConfig(mode, elementType) {
+    const config = { mode, elementType };
+
+    if (mode === 'JEOPARDY_ROUND') {
+        return {
+            ...config,
+            categories: ['Тема 1', 'Тема 2', 'Тема 3', 'Тема 4'],
+            values: [100, 200, 300, 400, 500],
+        };
+    }
+
+    if (mode === 'MILLIONAIRE_ROUND') {
+        return {
+            ...config,
+            ladder: [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000],
+        };
+    }
+
+    return config;
 }
 
 function addNewQuestion() {
@@ -386,49 +502,60 @@ function addNewQuestion() {
 }
 
 function addQuizElement(kind = 'QUESTION') {
-    if (!currentQuiz) {
-        showToast('Сначала создайте квиз', 'error');
+    syncLegacyGlobalsFromState();
+
+    if (!getActiveQuiz()) {
+        updateSaveStatus('Сначала создайте или откройте квиз', 'error');
+        showToast('Сначала создайте или откройте квиз', 'error');
+        updateConstructorAvailability();
         return;
     }
 
     const question = createDefaultQuestion(kind);
     questions.push(question);
-    ConstructorState.setQuestions(questions);
+    syncStateFromLegacyGlobals(true);
     renderQuestionsList();
     editQuestion(questions.length - 1);
+    updateConstructorAvailability();
     updateSaveStatus('Новый элемент не сохранён', 'dirty');
 }
 
 function editQuestion(index) {
+    syncLegacyGlobalsFromState();
     const question = questions[index];
     if (!question) return;
 
     currentQuestionIndex = index;
-    ConstructorState.setCurrentQuestionIndex(index);
+    syncStateFromLegacyGlobals(false);
     syncQuizEditorState();
 
     updateQuestionEditorUI(question);
     loadAdvancedSettings(question);
+    updateConstructorAvailability();
     updateSaveStatus(question.id ? 'Вопрос открыт' : 'Новый вопрос не сохранён', question.id ? 'idle' : 'dirty');
 }
 
 function resetEditor() {
     currentQuestionIndex = -1;
-    ConstructorState.setCurrentQuestionIndex(-1);
+    syncStateFromLegacyGlobals(false);
     syncQuizEditorState();
     updateQuestionEditorUI(null);
+    updateConstructorAvailability();
 }
 
 function setQuestionType(type) {
+    syncLegacyGlobalsFromState();
+
     if (currentQuestionIndex < 0 || !questions[currentQuestionIndex]) {
         showToast('Сначала выберите вопрос', 'error');
         return;
     }
 
     const question = questions[currentQuestionIndex];
+    question.elementType = getElementTypeForMode(type, question.elementType);
     question.type = type;
     question.gameMode = type;
-    question.layoutType = getLayoutTypeForMode(type);
+    question.layoutType = getLayoutTypeForMode(type, question.elementType);
     updateSaveStatus('Тип вопроса изменён', 'dirty');
 
     if (type === 'TRUE_FALSE' || type === 'TRUEFALSE') {
@@ -440,6 +567,7 @@ function setQuestionType(type) {
         question.answers = [];
         question.configJson = JSON.stringify({
             mode: type,
+            elementType: question.elementType,
             categories: ['Тема 1', 'Тема 2', 'Тема 3', 'Тема 4'],
             values: [100, 200, 300, 400, 500],
         });
@@ -452,6 +580,7 @@ function setQuestionType(type) {
         ];
         question.configJson = JSON.stringify({
             mode: type,
+            elementType: question.elementType,
             ladder: [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000],
         });
     } else if (!Array.isArray(question.answers) || !question.answers.length) {
@@ -464,11 +593,23 @@ function setQuestionType(type) {
     applyQuestionTypeUI(type);
     syncMediaPreview(question);
     renderQuestionSpecificInputs(question);
+    ConstructorState.setQuestions(questions);
     updateQuestionEditorUI(question);
     renderQuestionsList();
+    updateConstructorAvailability();
 }
 
-function getLayoutTypeForMode(type) {
+function getElementTypeForMode(type, currentElementType = 'QUESTION') {
+    if (type === 'INFO_SLIDE') return 'INFO_SLIDE';
+    if (type === 'ROUND_INTRO') return 'ROUND_INTRO';
+    if (['JEOPARDY_ROUND', 'MILLIONAIRE_ROUND'].includes(type)) return 'GAME_ROUND';
+    return currentElementType && !['INFO_SLIDE', 'ROUND_INTRO', 'GAME_ROUND'].includes(currentElementType)
+        ? currentElementType
+        : 'QUESTION';
+}
+
+function getLayoutTypeForMode(type, elementType = null) {
+    if (elementType) return elementType;
     if (type === 'INFO_SLIDE') return 'INFO_SLIDE';
     if (type === 'ROUND_INTRO') return 'ROUND_INTRO';
     if (['JEOPARDY_ROUND', 'MILLIONAIRE_ROUND'].includes(type)) return 'GAME_ROUND';
@@ -509,15 +650,55 @@ function syncPreviewFromProperties() {
     }
 }
 
-function updatePreviewField(fieldId, value) {
-    const field = document.getElementById(fieldId);
-    if (field) {
-        field.value = String(value || '').trim();
-    }
+function updateTemplateGallerySelection(template) {
+    document.querySelectorAll('.template-tile').forEach((tile) => {
+        const isActive = tile.dataset.template === template;
+        tile.classList.toggle('active', isActive);
+    });
+}
+
+function selectQuestionTemplate(template) {
+    const templateInput = document.getElementById('questionTemplate');
+    const answerLayout = document.getElementById('answerLayout');
+    const titleSize = document.getElementById('titleSize');
+
+    if (templateInput) templateInput.value = template;
+
+    const templateDefaults = {
+        classic: { answerLayout: 'grid-2', titleSize: 48 },
+        'media-left': { answerLayout: 'split-media', titleSize: 44 },
+        'answers-right': { answerLayout: 'list', titleSize: 46 },
+        'big-question': { answerLayout: 'bottom', titleSize: 62 },
+        'media-grid': { answerLayout: 'grid-2', titleSize: 42 },
+        poll: { answerLayout: 'list', titleSize: 44 },
+    };
+    const defaults = templateDefaults[template] || templateDefaults.classic;
+
+    if (answerLayout) answerLayout.value = defaults.answerLayout;
+    if (titleSize) titleSize.value = defaults.titleSize;
+
+    updateTemplateGallerySelection(template);
     syncPreviewFromProperties();
 }
 
+function updatePreviewField(fieldId, value) {
+    const field = document.getElementById(fieldId);
+    const normalizedValue = String(value || '').trim();
+    if (field) {
+        field.value = normalizedValue;
+    }
+    if (currentQuestionIndex >= 0 && questions[currentQuestionIndex]) {
+        if (fieldId === 'questionText') questions[currentQuestionIndex].text = normalizedValue;
+        if (fieldId === 'questionSubtitle') questions[currentQuestionIndex].subtitle = normalizedValue;
+        ConstructorState.setQuestions(questions);
+        renderQuestionsList();
+        updateSaveStatus('Есть несохранённые изменения', 'dirty');
+    }
+}
+
 async function saveCurrentQuestion() {
+    syncLegacyGlobalsFromState();
+
     if (!currentQuiz) {
         showToast('Сначала создайте квиз', 'error');
         return;
@@ -560,6 +741,7 @@ async function saveCurrentQuestion() {
         renderQuestionsList();
         editQuestion(currentQuestionIndex);
         ConstructorState.markSaved();
+        updateConstructorAvailability();
         updateSaveStatus('Вопрос сохранён', 'saved');
         showToast('✅ Вопрос сохранён', 'success');
     } catch (error) {
@@ -569,6 +751,8 @@ async function saveCurrentQuestion() {
 }
 
 async function deleteCurrentQuestion() {
+    syncLegacyGlobalsFromState();
+
     if (currentQuestionIndex < 0 || !questions[currentQuestionIndex]) {
         showToast('Вопрос не выбран', 'error');
         return;
@@ -593,6 +777,7 @@ async function deleteCurrentQuestion() {
         ConstructorState.setQuestions(questions);
         renderQuestionsList();
         resetEditor();
+        updateConstructorAvailability();
         updateSaveStatus('Вопрос удалён', 'saved');
         showToast('🗑️ Вопрос удалён', 'success');
     } catch (error) {
@@ -610,6 +795,7 @@ function setCorrectAnswer(index) {
 
     renderAnswersEditor(questions[currentQuestionIndex].answers);
     QuestionEditorComponent.renderStudioPreview(questions[currentQuestionIndex]);
+    ConstructorState.setQuestions(questions);
     updateSaveStatus('Правильный ответ изменён', 'dirty');
 }
 
@@ -618,7 +804,11 @@ function updateAnswerText(index, value) {
     if (!questions[currentQuestionIndex].answers[index]) return;
 
     questions[currentQuestionIndex].answers[index].text = value;
-    QuestionEditorComponent.renderStudioPreview(questions[currentQuestionIndex]);
+    const editorInput = document.querySelector(`#answersEditor .answer-item[data-index="${index}"] .answer-input`);
+    if (editorInput && editorInput.value !== value) {
+        editorInput.value = value;
+    }
+    ConstructorState.setQuestions(questions);
     updateSaveStatus('Есть несохранённые изменения', 'dirty');
 }
 
@@ -636,6 +826,7 @@ function addAnswer() {
     });
 
     questions[currentQuestionIndex].answers = answers;
+    ConstructorState.setQuestions(questions);
     renderAnswersEditor(answers);
     QuestionEditorComponent.renderStudioPreview(questions[currentQuestionIndex]);
     updateSaveStatus('Ответ добавлен', 'dirty');
@@ -661,6 +852,7 @@ function removeAnswer(index) {
         order: answerIndex,
     }));
 
+    ConstructorState.setQuestions(questions);
     renderAnswersEditor(answers);
     QuestionEditorComponent.renderStudioPreview(questions[currentQuestionIndex]);
     updateSaveStatus('Ответ удалён', 'dirty');
@@ -690,6 +882,7 @@ async function uploadMedia(event) {
         if (file.type.startsWith('audio/')) question.audioUrl = response.url;
         if (file.type.startsWith('video/')) question.videoUrl = response.url;
 
+        ConstructorState.setQuestions(questions);
         syncMediaPreview(question);
         QuestionEditorComponent.renderStudioPreview(question);
 
@@ -708,6 +901,38 @@ async function uploadMedia(event) {
     }
 
     event.target.value = '';
+}
+
+function initMediaDragAndDrop() {
+    const uploadArea = document.getElementById('mediaUploadArea');
+    const fileInput = document.getElementById('mediaFile');
+    if (!uploadArea || !fileInput) return;
+
+    const resetHint = () => {
+        const placeholder = document.getElementById('uploadPlaceholder');
+        if (placeholder && !uploadArea.classList.contains('has-file')) {
+            placeholder.textContent = '📁 Нажмите или перетащите файл';
+        }
+    };
+
+    uploadArea.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        uploadArea.classList.add('is-dragging');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('is-dragging');
+        resetHint();
+    });
+
+    uploadArea.addEventListener('drop', (event) => {
+        event.preventDefault();
+        uploadArea.classList.remove('is-dragging');
+        const file = event.dataTransfer?.files?.[0];
+        if (!file) return;
+        fileInput.files = event.dataTransfer.files;
+        uploadMedia({ target: fileInput });
+    });
 }
 
 // Sync with legacy state
@@ -734,6 +959,9 @@ window.saveQuizMeta = saveQuizMeta;
 window.deleteQuizById = deleteQuizById;
 window.syncPreviewFromProperties = syncPreviewFromProperties;
 window.updatePreviewField = updatePreviewField;
+window.updateConstructorAvailability = updateConstructorAvailability;
+window.selectQuestionTemplate = selectQuestionTemplate;
+window.updateTemplateGallerySelection = updateTemplateGallerySelection;
 
 window.createQuiz = async function createQuizFromModal() {
     const payload = getQuizCreatePayloadFromModal();

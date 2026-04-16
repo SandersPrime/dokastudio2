@@ -14,6 +14,49 @@ function isAdmin(user) {
   return user?.role === ROLES.ADMIN;
 }
 
+const QUIZ_LIST_INCLUDE = {
+  author: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
+  _count: {
+    select: {
+      questions: true,
+      purchases: true,
+      gameSessions: true,
+    },
+  },
+};
+
+function normalizeLibraryQuiz(quiz, source, extra = {}) {
+  return {
+    id: quiz.id,
+    title: quiz.title,
+    description: quiz.description,
+    thumbnailUrl: quiz.thumbnailUrl,
+    author: quiz.author || null,
+    authorId: quiz.authorId,
+    source,
+    canEdit: source !== 'PURCHASED',
+    questionCount: quiz._count?.questions || 0,
+    playedCount: quiz._count?.gameSessions || 0,
+    purchaseCount: quiz._count?.purchases || 0,
+    createdAt: quiz.createdAt,
+    updatedAt: quiz.updatedAt,
+    isPublished: quiz.isPublished,
+    isTemplate: quiz.isTemplate,
+    isPaid: quiz.isPaid,
+    price: quiz.price,
+    category: quiz.category,
+    ageGroup: quiz.ageGroup,
+    format: quiz.format,
+    marketplaceStatus: quiz.marketplaceStatus,
+    ...extra,
+  };
+}
+
 async function getQuizOrThrow(quizId) {
   const quiz = await quizRepository.quiz.findUnique({
     where: { id: quizId },
@@ -50,23 +93,62 @@ async function getQuizList({ authorId = null, currentUser }) {
   const quizzes = await quizRepository.quiz.findMany({
     where,
     orderBy: { createdAt: 'desc' },
+    include: QUIZ_LIST_INCLUDE,
+  });
+
+  return { quizzes };
+}
+
+async function getQuizLibrary({ currentUser }) {
+  const ownQuizzes = await quizRepository.quiz.findMany({
+    where: isAdmin(currentUser) ? {} : { authorId: currentUser.id },
+    orderBy: { updatedAt: 'desc' },
+    include: QUIZ_LIST_INCLUDE,
+  });
+
+  const purchases = await quizRepository.purchase.findMany({
+    where: { userId: currentUser.id },
+    orderBy: { createdAt: 'desc' },
     include: {
-      author: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      _count: {
-        select: {
-          questions: true,
-          purchases: true,
-        },
+      quiz: {
+        include: QUIZ_LIST_INCLUDE,
       },
     },
   });
 
-  return { quizzes };
+  const itemsByKey = new Map();
+
+  ownQuizzes.forEach((quiz) => {
+    itemsByKey.set(`OWNED:${quiz.id}`, normalizeLibraryQuiz(quiz, 'OWNED'));
+  });
+
+  purchases.forEach((purchase) => {
+    if (!purchase.quiz) return;
+
+    itemsByKey.set(
+      `PURCHASED:${purchase.quiz.id}`,
+      normalizeLibraryQuiz(purchase.quiz, 'PURCHASED', {
+        canEdit: false,
+        purchasedAt: purchase.createdAt,
+        purchaseId: purchase.id,
+        pricePaid: purchase.pricePaid,
+      })
+    );
+  });
+
+  const quizzes = Array.from(itemsByKey.values()).sort((a, b) => {
+    const aDate = new Date(a.purchasedAt || a.updatedAt || a.createdAt).getTime();
+    const bDate = new Date(b.purchasedAt || b.updatedAt || b.createdAt).getTime();
+    return bDate - aDate;
+  });
+
+  return {
+    quizzes,
+    meta: {
+      ownCount: ownQuizzes.length,
+      purchasedCount: purchases.length,
+    },
+  };
 }
 
 async function getQuizById({ quizId, currentUser }) {
@@ -205,6 +287,7 @@ function buildQuestionCloneData(question) {
     imageUrl: question.imageUrl,
     audioUrl: question.audioUrl,
     videoUrl: question.videoUrl,
+    elementType: question.elementType,
     type: question.type,
     layoutType: question.layoutType,
     gameMode: question.gameMode,
@@ -300,6 +383,7 @@ async function cloneQuizToUser({ sourceQuizId, userId, titleSuffix = ' (копи
 
 module.exports = {
   getQuizList,
+  getQuizLibrary,
   getQuizById,
   createQuiz,
   updateQuiz,
