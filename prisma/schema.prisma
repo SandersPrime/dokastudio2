@@ -91,6 +91,10 @@ model Quiz {
   purchases    Purchase[]
   gameSessions GameSession[]
   homeworks    Homework[]
+
+  @@index([authorId])
+  @@index([authorId, updatedAt])
+  @@index([isPublished])
 }
 
 model QuizRound {
@@ -99,6 +103,8 @@ model QuizRound {
   quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
   title  String
   order  Int    @map("order_index")
+  roundType  String? @map("round_type")
+  configJson String? @map("config_json")
 
   questions Question[]
 }
@@ -111,10 +117,16 @@ model Question {
   round   QuizRound? @relation(fields: [roundId], references: [id])
 
   text              String
+  subtitle          String? @map("subtitle")
   imageUrl          String? @map("image_url")
   audioUrl          String? @map("audio_url")
   videoUrl          String? @map("video_url")
   type              String  @default("TEXT")
+  layoutType        String  @default("QUESTION") @map("layout_type")
+  gameMode          String? @map("game_mode")
+  backgroundColor   String? @map("background_color")
+  backgroundImageUrl String? @map("background_image_url")
+  configJson        String? @map("config_json")
   points            Int     @default(100)
   order             Int     @map("order_index")
   timeLimit         Int?    @map("time_limit")

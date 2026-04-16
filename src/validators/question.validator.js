@@ -3,12 +3,71 @@
 const { createHttpError } = require('../utils/http-error');
 
 const ALLOWED_TYPES = new Set([
+  'EVERYONE_ANSWERS',
+  'FASTEST_FINGER',
+  'MULTIPLE_CORRECT',
+  'ORDERED',
   'TEXT',
   'IMAGE',
   'AUDIO',
   'VIDEO',
   'TRUEFALSE',
+  'TRUE_FALSE',
+  'DECREASING_POINTS',
+  'WAGER',
+  'MAJORITY_RULES',
+  'LAST_MAN_STANDING',
+  'JEOPARDY_ROUND',
+  'MILLIONAIRE_ROUND',
+  'INFO_SLIDE',
+  'ROUND_INTRO',
+  'WORDCLOUD',
+  'MAJORITYRULES',
+  'BILLBOARD',
+  'RATING',
 ]);
+
+const ALLOWED_LAYOUT_TYPES = new Set([
+  'QUESTION',
+  'INFO_SLIDE',
+  'ROUND_INTRO',
+  'GAME_ROUND',
+]);
+
+function normalizeType(type) {
+  const normalized = String(type || '').trim().toUpperCase();
+  if (normalized === 'TRUEFALSE') return 'TRUE_FALSE';
+  if (normalized === 'MULTIPLE') return 'EVERYONE_ANSWERS';
+  if (normalized === 'MAJORITYRULES') return 'MAJORITY_RULES';
+  return normalized;
+}
+
+function toOptionalString(value) {
+  if (value === null || value === undefined || String(value).trim() === '') {
+    return null;
+  }
+
+  return String(value).trim();
+}
+
+function normalizeConfigJson(value) {
+  if (value === null || value === undefined || value === '') return null;
+
+  if (typeof value === 'string') {
+    try {
+      JSON.parse(value);
+      return value;
+    } catch (error) {
+      throw createHttpError(400, 'configJson должен быть валидным JSON');
+    }
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch (error) {
+    throw createHttpError(400, 'configJson должен быть сериализуемым объектом');
+  }
+}
 
 function normalizeAnswer(answer = {}, index = 0) {
   const text = String(answer.text || '').trim();
@@ -30,7 +89,11 @@ function normalizeAnswers(rawAnswers = []) {
 }
 
 function ensureCorrectAnswerExists(type, answers) {
-  if (type === 'TRUEFALSE') {
+  if (type === 'TRUEFALSE' || type === 'TRUE_FALSE') {
+    return;
+  }
+
+  if (type === 'INFO_SLIDE' || type === 'ROUND_INTRO' || type === 'JEOPARDY_ROUND') {
     return;
   }
 
@@ -55,11 +118,26 @@ function normalizeQuestionPayload(payload = {}, isUpdate = false) {
   }
 
   if (!isUpdate || payload.type !== undefined) {
-    const type = String(payload.type || '').trim().toUpperCase();
+    const type = normalizeType(payload.type || 'EVERYONE_ANSWERS');
     if (!ALLOWED_TYPES.has(type)) {
       throw createHttpError(400, `Неподдерживаемый тип вопроса: ${type}`);
     }
     data.type = type;
+  }
+
+  if (!isUpdate || payload.layoutType !== undefined) {
+    const fallbackLayout = data.type === 'INFO_SLIDE'
+      ? 'INFO_SLIDE'
+      : data.type === 'ROUND_INTRO'
+        ? 'ROUND_INTRO'
+        : ['JEOPARDY_ROUND', 'MILLIONAIRE_ROUND'].includes(data.type)
+          ? 'GAME_ROUND'
+          : 'QUESTION';
+    const layoutType = String(payload.layoutType || fallbackLayout).trim().toUpperCase();
+    if (!ALLOWED_LAYOUT_TYPES.has(layoutType)) {
+      throw createHttpError(400, `Неподдерживаемый layoutType: ${layoutType}`);
+    }
+    data.layoutType = layoutType;
   }
 
   if (!isUpdate || payload.points !== undefined) {
@@ -124,9 +202,13 @@ function normalizeQuestionPayload(payload = {}, isUpdate = false) {
   }
 
   const optionalStringFields = [
+    'subtitle',
     'imageUrl',
     'audioUrl',
     'videoUrl',
+    'gameMode',
+    'backgroundColor',
+    'backgroundImageUrl',
     'countdownMode',
     'textReveal',
     'demographicGroup',
@@ -136,18 +218,18 @@ function normalizeQuestionPayload(payload = {}, isUpdate = false) {
 
   for (const field of optionalStringFields) {
     if (!isUpdate || payload[field] !== undefined) {
-      const value = payload[field];
-      data[field] =
-        value === null || value === undefined || String(value).trim() === ''
-          ? null
-          : String(value).trim();
+      data[field] = toOptionalString(payload[field]);
     }
+  }
+
+  if (!isUpdate || payload.configJson !== undefined) {
+    data.configJson = normalizeConfigJson(payload.configJson);
   }
 
   // Совместимость с текущим фронтом, где медиа могло прийти как mediaUrl
   if (payload.mediaUrl) {
     const mediaUrl = String(payload.mediaUrl).trim();
-    const type = data.type || String(payload.type || '').trim().toUpperCase();
+    const type = data.type || normalizeType(payload.type || 'EVERYONE_ANSWERS');
 
     if (type === 'IMAGE') data.imageUrl = mediaUrl;
     if (type === 'AUDIO') data.audioUrl = mediaUrl;
@@ -155,10 +237,10 @@ function normalizeQuestionPayload(payload = {}, isUpdate = false) {
   }
 
   if (!isUpdate || payload.answers !== undefined) {
-    const type = data.type || String(payload.type || '').trim().toUpperCase();
+    const type = data.type || normalizeType(payload.type || 'EVERYONE_ANSWERS');
     let answers = normalizeAnswers(payload.answers || []);
 
-    if (type === 'TRUEFALSE') {
+    if (type === 'TRUEFALSE' || type === 'TRUE_FALSE') {
       const selectedTrue =
         answers.find((a) => a.text.toLowerCase() === 'правда' && a.isCorrect) ||
         answers.find((a) => a.text.toLowerCase() === 'true' && a.isCorrect);

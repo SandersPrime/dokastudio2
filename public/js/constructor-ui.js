@@ -2,15 +2,38 @@
 
 function renderQuestionTypeSelector() {
     const container = document.getElementById('questionTypeSelector');
-    if (!container || typeof QuestionTypeFactory === 'undefined') return;
+    const select = document.getElementById('questionTypeSelect');
+    if (!container) return;
 
-    const types = QuestionTypeFactory.getAllTypes();
+    const types = window.STUDIO_QUESTION_TYPES || [
+        { type: 'EVERYONE_ANSWERS', name: 'Everyone Answers', icon: 'A' },
+        { type: 'FASTEST_FINGER', name: 'Fastest Finger', icon: 'F' },
+        { type: 'MULTIPLE_CORRECT', name: 'Multiple Correct', icon: 'M' },
+        { type: 'ORDERED', name: 'Ordered', icon: 'O' },
+        { type: 'TRUE_FALSE', name: 'True / False', icon: 'T' },
+        { type: 'TEXT', name: 'Text', icon: 'Tx' },
+        { type: 'IMAGE', name: 'Image', icon: 'Img' },
+        { type: 'AUDIO', name: 'Audio', icon: 'Aud' },
+        { type: 'VIDEO', name: 'Video', icon: 'Vid' },
+        { type: 'DECREASING_POINTS', name: 'Decreasing Points', icon: 'D' },
+        { type: 'WAGER', name: 'Wager', icon: 'W' },
+        { type: 'MAJORITY_RULES', name: 'Majority Rules', icon: 'MR' },
+        { type: 'LAST_MAN_STANDING', name: 'Last Man Standing', icon: 'LMS' },
+        { type: 'JEOPARDY_ROUND', name: 'Jeopardy Round', icon: 'J' },
+        { type: 'MILLIONAIRE_ROUND', name: 'Millionaire Round', icon: '$' },
+    ];
 
     container.innerHTML = types.map((type) => `
         <div class="type-btn" data-type="${type.type}" onclick="setQuestionType('${type.type}')">
             ${type.icon} ${type.name}
         </div>
     `).join('');
+
+    if (select) {
+        select.innerHTML = types.map((type) => `
+            <option value="${type.type}">${type.name}</option>
+        `).join('');
+    }
 }
 
 function renderMediaUploadSection() {
@@ -19,7 +42,7 @@ function renderMediaUploadSection() {
 
     container.innerHTML = `
         <div class="media-upload-area" id="mediaUploadArea" onclick="document.getElementById('mediaFile').click()">
-            <p id="uploadPlaceholder">📁 Нажмите или перетащите файл</p>
+            <p id="uploadPlaceholder">Нажмите, чтобы прикрепить image / audio / video</p>
             <input
                 type="file"
                 id="mediaFile"
@@ -39,7 +62,7 @@ function renderAnswersSection() {
     container.innerHTML = `
         <div class="d-flex justify-between items-center mb-2">
             <label class="form-label">Варианты ответов</label>
-            <button type="button" class="btn btn-outline btn-sm" onclick="addAnswer()">➕ Добавить</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="addAnswer()">Добавить</button>
         </div>
         <div class="answers-editor" id="answersEditor"></div>
     `;
@@ -52,7 +75,7 @@ function renderTrueFalseSection() {
     container.innerHTML = `
         <div class="form-group">
             <label class="form-label">Правильный ответ</label>
-            <select class="input" id="trueFalseSelect">
+            <select class="input" id="trueFalseSelect" onchange="syncPreviewFromProperties()">
                 <option value="true">✅ Правда</option>
                 <option value="false">❌ Ложь</option>
             </select>
@@ -80,6 +103,9 @@ function loadAdvancedSettings(question) {
     };
 
     setValue('pointsAtStart', question.pointsAtStart, 100);
+    setValue('questionSubtitle', question.subtitle, '');
+    setValue('backgroundColor', question.backgroundColor, '#f6f8fb');
+    setValue('backgroundImageUrl', question.backgroundImageUrl, '');
     setValue('pointsAtEnd', question.pointsAtEnd, 100);
     setValue('penaltyPoints', question.penaltyPoints, 0);
     setValue('penaltyNoAnswer', question.penaltyNoAnswer, 0);

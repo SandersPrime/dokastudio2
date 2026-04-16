@@ -21,11 +21,13 @@
         .empty-state { padding: 24px; opacity: .72; }
         @media (max-width: 960px) { .market-toolbar { grid-template-columns: 1fr; } }
     </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
 </head>
 <body>
 <main class="market-page">
-    <div class="d-flex justify-between items-center">
+    <div class="page-header">
         <div>
+            <div class="page-kicker">Marketplace</div>
             <h1>Marketplace</h1>
             <p class="text-secondary">Покупайте платные квизы и добавляйте бесплатные шаблоны.</p>
         </div>
@@ -36,6 +38,7 @@
     </div>
     <div id="marketStatus" class="status-box"></div>
     <section class="card">
+        <div class="page-kicker">Поиск и фильтры</div>
         <div class="market-toolbar">
             <input id="marketSearch" class="input" placeholder="Поиск">
             <input id="marketCategory" class="input" placeholder="Категория">

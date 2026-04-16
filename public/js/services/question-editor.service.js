@@ -29,12 +29,51 @@ const QuestionEditorService = {
    * @returns {Object}
    */
   collectFormValues(type, document) {
+    const selectedType = document.getElementById('questionTypeSelect')?.value || type;
     return {
       text: this.getValue(document, 'questionText'),
+      subtitle: this.getValue(document, 'questionSubtitle'),
       points: this.getIntValue(document, 'questionPoints', 100),
       timeLimit: this.getIntValue(document, 'questionTime', 30),
-      type,
+      type: selectedType,
+      gameMode: selectedType,
+      layoutType: this.getLayoutTypeForMode(selectedType),
+      backgroundColor: this.getValue(document, 'backgroundColor'),
+      backgroundImageUrl: this.getValue(document, 'backgroundImageUrl'),
+      configJson: this.buildModeConfig(selectedType, document),
     };
+  },
+
+  getLayoutTypeForMode(type) {
+    if (type === 'INFO_SLIDE') return 'INFO_SLIDE';
+    if (type === 'ROUND_INTRO') return 'ROUND_INTRO';
+    if (['JEOPARDY_ROUND', 'MILLIONAIRE_ROUND'].includes(type)) return 'GAME_ROUND';
+    return 'QUESTION';
+  },
+
+  buildModeConfig(type, document) {
+    const baseConfig = {
+      mode: type,
+      backgroundColor: this.getValue(document, 'backgroundColor'),
+      backgroundImageUrl: this.getValue(document, 'backgroundImageUrl'),
+    };
+
+    if (type === 'JEOPARDY_ROUND') {
+      return JSON.stringify({
+        ...baseConfig,
+        categories: ['Тема 1', 'Тема 2', 'Тема 3', 'Тема 4'],
+        values: [100, 200, 300, 400, 500],
+      });
+    }
+
+    if (type === 'MILLIONAIRE_ROUND') {
+      return JSON.stringify({
+        ...baseConfig,
+        ladder: [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000],
+      });
+    }
+
+    return JSON.stringify(baseConfig);
   },
 
   /**
@@ -44,7 +83,11 @@ const QuestionEditorService = {
    * @returns {Array<Object>}
    */
   collectAnswers(type, document) {
-    if (type === 'TRUEFALSE') {
+    if (['INFO_SLIDE', 'ROUND_INTRO', 'JEOPARDY_ROUND'].includes(type)) {
+      return [];
+    }
+
+    if (type === 'TRUEFALSE' || type === 'TRUE_FALSE') {
       const isCorrect = document.getElementById('trueFalseSelect')?.value === 'true';
       return [
         { text: 'Правда', isCorrect, order: 0 },
@@ -99,6 +142,8 @@ const QuestionEditorService = {
       demographicGroup: getValue('demographicGroup', ''),
       slideRouting: getValue('slideRouting', ''),
       notes: getValue('questionNotes', ''),
+      backgroundColor: getValue('backgroundColor', ''),
+      backgroundImageUrl: getValue('backgroundImageUrl', ''),
       autoJudge: getChecked('autoJudge', true),
       lockoutOnWrong: getChecked('lockoutOnWrong', true),
       showCorrectAnswer: getChecked('showCorrectAnswer', true),

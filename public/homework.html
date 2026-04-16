@@ -41,11 +41,16 @@
             .homework-item, .report-row { flex-direction: column; }
         }
     </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
 </head>
 <body>
 <div class="homework-page">
-    <div class="d-flex justify-between items-center mb-3">
-        <h1>Домашние задания</h1>
+    <div class="page-header">
+        <div>
+            <div class="page-kicker">Teacher homework</div>
+            <h1>Домашние задания</h1>
+            <p class="text-secondary">Создавайте задания, делитесь ссылкой и отслеживайте прогресс учеников.</p>
+        </div>
         <a class="btn btn-outline" href="/constructor">К конструктору</a>
     </div>
 
@@ -53,7 +58,9 @@
 
     <div class="homework-grid">
         <section class="card">
+            <div class="page-kicker">Новое задание</div>
             <h2>Создать homework</h2>
+            <p class="text-secondary">Выберите квиз, дедлайн и правила попыток.</p>
             <form id="createHomeworkForm" onsubmit="event.preventDefault(); createHomework();">
                 <div class="form-group">
                     <label class="form-label">Квиз</label>
@@ -88,7 +95,10 @@
         <section>
             <div class="card">
                 <div class="d-flex justify-between items-center">
-                    <h2>Мои homework</h2>
+                    <div>
+                        <div class="page-kicker">Активные задания</div>
+                        <h2>Мои homework</h2>
+                    </div>
                     <button class="btn btn-outline" onclick="loadTeacherHomework()">Обновить</button>
                 </div>
                 <div id="homeworkList" class="mt-3">

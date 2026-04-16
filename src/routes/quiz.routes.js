@@ -3,13 +3,13 @@
 const express = require('express');
 const quizController = require('../controllers/quiz.controller');
 const questionController = require('../controllers/question.controller');
-const { authenticateToken, optionalAuth } = require('../middlewares/auth');
+const { authenticateToken } = require('../middlewares/auth');
 const { asyncHandler } = require('../utils/async-handler');
 
 const router = express.Router();
 
-router.get('/', optionalAuth, asyncHandler(quizController.list));
-router.get('/:id', optionalAuth, asyncHandler(quizController.getById));
+router.get('/', authenticateToken, asyncHandler(quizController.list));
+router.get('/:id', authenticateToken, asyncHandler(quizController.getById));
 router.post('/', authenticateToken, asyncHandler(quizController.create));
 router.put('/:id', authenticateToken, asyncHandler(quizController.update));
 router.delete('/:id', authenticateToken, asyncHandler(quizController.remove));

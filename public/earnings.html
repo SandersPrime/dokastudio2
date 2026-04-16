@@ -18,11 +18,13 @@
         .empty-state { padding: 24px; opacity: .72; }
         @media (max-width: 800px) { .table-row { grid-template-columns: 1fr; } }
     </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
 </head>
 <body>
 <main class="page" id="earningsRoot">
-    <div class="d-flex justify-between items-center">
+    <div class="page-header">
         <div>
+            <div class="page-kicker">Финансы автора</div>
             <h1>Доходы автора</h1>
             <p class="text-secondary">Продажи, баланс и заявки на выплаты.</p>
         </div>
@@ -33,6 +35,7 @@
     <section id="summaryCards" class="summary-grid mt-4"></section>
 
     <section class="card mt-4">
+        <div class="page-kicker">Выплата</div>
         <h2>Запросить выплату</h2>
         <form id="payoutForm" onsubmit="event.preventDefault(); createPayoutRequest();">
             <div class="d-flex gap-2">

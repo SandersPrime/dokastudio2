@@ -5,7 +5,7 @@ const quizService = require('../services/quiz.service');
 async function list(req, res) {
   const result = await quizService.getQuizList({
     authorId: req.query.authorId || null,
-    currentUserId: req.user?.id || null,
+    currentUser: req.user,
   });
 
   return res.json(result);
@@ -14,7 +14,7 @@ async function list(req, res) {
 async function getById(req, res) {
   const result = await quizService.getQuizById({
     quizId: req.params.id,
-    currentUserId: req.user?.id || null,
+    currentUser: req.user,
   });
 
   return res.json(result);

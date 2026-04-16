@@ -1,6 +1,7 @@
 // src/services/quiz.service.js
 
 const quizRepository = require('../repositories/quiz.repository');
+const { prisma } = require('../config/prisma');
 const { createHttpError } = require('../utils/http-error');
 const { ROLES } = require('../constants/roles');
 const {
@@ -35,19 +36,16 @@ async function assertQuizWriteAccess(quizId, currentUser) {
   return quiz;
 }
 
-async function getQuizList({ authorId = null, currentUserId = null }) {
-  const where = {};
+async function getQuizList({ authorId = null, currentUser }) {
+  const requestedAuthorId = authorId || currentUser.id;
 
-  if (authorId) {
-    where.authorId = authorId;
-  } else if (!currentUserId) {
-    where.isPublished = true;
-  } else {
-    where.OR = [
-      { isPublished: true },
-      { authorId: currentUserId },
-    ];
+  if (requestedAuthorId !== currentUser.id && !isAdmin(currentUser)) {
+    throw createHttpError(403, 'Нет доступа к списку квизов этого пользователя');
   }
+
+  const where = isAdmin(currentUser) && !authorId
+    ? {}
+    : { authorId: requestedAuthorId };
 
   const quizzes = await quizRepository.quiz.findMany({
     where,
@@ -71,7 +69,7 @@ async function getQuizList({ authorId = null, currentUserId = null }) {
   return { quizzes };
 }
 
-async function getQuizById({ quizId, currentUserId = null }) {
+async function getQuizById({ quizId, currentUser }) {
   const quiz = await quizRepository.quiz.findUnique({
     where: { id: quizId },
     include: {
@@ -99,10 +97,7 @@ async function getQuizById({ quizId, currentUserId = null }) {
     throw createHttpError(404, 'Квиз не найден');
   }
 
-  const canRead =
-    quiz.isPublished || quiz.authorId === currentUserId;
-
-  if (!canRead) {
+  if (quiz.authorId !== currentUser.id && !isAdmin(currentUser)) {
     throw createHttpError(403, 'Нет доступа к квизу');
   }
 
@@ -206,10 +201,16 @@ async function reorderQuestions({ quizId, currentUser, payload }) {
 function buildQuestionCloneData(question) {
   return {
     text: question.text,
+    subtitle: question.subtitle,
     imageUrl: question.imageUrl,
     audioUrl: question.audioUrl,
     videoUrl: question.videoUrl,
     type: question.type,
+    layoutType: question.layoutType,
+    gameMode: question.gameMode,
+    backgroundColor: question.backgroundColor,
+    backgroundImageUrl: question.backgroundImageUrl,
+    configJson: question.configJson,
     points: question.points,
     order: question.order,
     timeLimit: question.timeLimit,

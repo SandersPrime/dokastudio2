@@ -2,14 +2,76 @@
 
 const { createHttpError } = require('../utils/http-error');
 
+const QUIZ_TITLE_MAX_LENGTH = 160;
+const QUIZ_DESCRIPTION_MAX_LENGTH = 2000;
+const QUIZ_META_MAX_LENGTH = 80;
+const QUIZ_URL_MAX_LENGTH = 2048;
+
 function toOptionalString(value) {
   if (value === undefined || value === null) return null;
   const str = String(value).trim();
   return str.length ? str : null;
 }
 
+function assertMaxLength(value, maxLength, fieldLabel) {
+  if (value !== null && value !== undefined && String(value).length > maxLength) {
+    throw createHttpError(400, `${fieldLabel} слишком длинное`);
+  }
+}
+
+function toOptionalUrl(value, fieldLabel) {
+  const str = toOptionalString(value);
+  if (!str) return null;
+
+  assertMaxLength(str, QUIZ_URL_MAX_LENGTH, fieldLabel);
+
+  try {
+    const parsed = new URL(str, 'http://localhost');
+    const isAbsolute = parsed.origin !== 'http://localhost' || /^https?:\/\//i.test(str);
+    const isLocalPath = str.startsWith('/');
+
+    if (!isAbsolute && !isLocalPath) {
+      throw new Error('Invalid URL');
+    }
+
+    if (isAbsolute && !['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error('Invalid protocol');
+    }
+
+    return str;
+  } catch (error) {
+    throw createHttpError(400, `${fieldLabel} должен быть URL или локальным путём`);
+  }
+}
+
+function normalizeQuizMeta(payload = {}) {
+  const description = toOptionalString(payload.description);
+  const thumbnailUrl = toOptionalUrl(payload.thumbnailUrl, 'Обложка');
+  const category = toOptionalString(payload.category);
+  const ageGroup = toOptionalString(payload.ageGroup);
+  const format = toOptionalString(payload.format);
+
+  assertMaxLength(description, QUIZ_DESCRIPTION_MAX_LENGTH, 'Описание');
+  assertMaxLength(category, QUIZ_META_MAX_LENGTH, 'Категория');
+  assertMaxLength(ageGroup, QUIZ_META_MAX_LENGTH, 'Возрастная группа');
+  assertMaxLength(format, QUIZ_META_MAX_LENGTH, 'Формат');
+
+  return {
+    description,
+    thumbnailUrl,
+    category,
+    ageGroup,
+    format,
+  };
+}
+
 function toOptionalBoolean(value) {
   if (value === undefined) return undefined;
+  if (typeof value === 'boolean') return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (value === 1 || value === '1') return true;
+  if (value === 0 || value === '0') return false;
   return Boolean(value);
 }
 
@@ -24,17 +86,17 @@ function toOptionalNumber(value) {
 
 function validateCreateQuizPayload(payload = {}) {
   const title = String(payload.title || '').trim();
-  const description = toOptionalString(payload.description);
-  const thumbnailUrl = toOptionalString(payload.thumbnailUrl);
+  const meta = normalizeQuizMeta(payload);
 
   if (!title) {
     throw createHttpError(400, 'Название квиза обязательно');
   }
 
+  assertMaxLength(title, QUIZ_TITLE_MAX_LENGTH, 'Название');
+
   return {
     title,
-    description,
-    thumbnailUrl,
+    ...meta,
     isPrivate: false,
     hasTimer: true,
     timePerQuestion: 30,
@@ -45,9 +107,6 @@ function validateCreateQuizPayload(payload = {}) {
     isPaid: false,
     price: 0,
     discount: 0,
-    category: toOptionalString(payload.category),
-    ageGroup: toOptionalString(payload.ageGroup),
-    format: toOptionalString(payload.format),
   };
 }
 
@@ -59,15 +118,18 @@ function validateUpdateQuizPayload(payload = {}) {
     if (!title) {
       throw createHttpError(400, 'Название квиза не может быть пустым');
     }
+    assertMaxLength(title, QUIZ_TITLE_MAX_LENGTH, 'Название');
     data.title = title;
   }
 
   if (payload.description !== undefined) {
-    data.description = toOptionalString(payload.description);
+    const description = toOptionalString(payload.description);
+    assertMaxLength(description, QUIZ_DESCRIPTION_MAX_LENGTH, 'Описание');
+    data.description = description;
   }
 
   if (payload.thumbnailUrl !== undefined) {
-    data.thumbnailUrl = toOptionalString(payload.thumbnailUrl);
+    data.thumbnailUrl = toOptionalUrl(payload.thumbnailUrl, 'Обложка');
   }
 
   if (payload.isPrivate !== undefined) {
@@ -123,15 +185,25 @@ function validateUpdateQuizPayload(payload = {}) {
   }
 
   if (payload.category !== undefined) {
-    data.category = toOptionalString(payload.category);
+    const category = toOptionalString(payload.category);
+    assertMaxLength(category, QUIZ_META_MAX_LENGTH, 'Категория');
+    data.category = category;
   }
 
   if (payload.ageGroup !== undefined) {
-    data.ageGroup = toOptionalString(payload.ageGroup);
+    const ageGroup = toOptionalString(payload.ageGroup);
+    assertMaxLength(ageGroup, QUIZ_META_MAX_LENGTH, 'Возрастная группа');
+    data.ageGroup = ageGroup;
   }
 
   if (payload.format !== undefined) {
-    data.format = toOptionalString(payload.format);
+    const format = toOptionalString(payload.format);
+    assertMaxLength(format, QUIZ_META_MAX_LENGTH, 'Формат');
+    data.format = format;
+  }
+
+  if (!Object.keys(data).length) {
+    throw createHttpError(400, 'Нет данных для обновления');
   }
 
   return data;

@@ -107,20 +107,32 @@
             .panel-grid { grid-template-columns: 1fr; }
         }
     </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
 </head>
 <body>
 <div class="host-page">
-    <h1>Режим ведущего</h1>
+    <header class="page-header host-hero">
+        <div>
+            <div class="page-kicker">Live host</div>
+            <h1>Режим ведущего</h1>
+            <p class="text-secondary">Запустите лобби, следите за ответами и управляйте темпом игры с одного экрана.</p>
+        </div>
+    </header>
     <div id="hostError" class="error-box"></div>
 
     <div id="quizSelectionPanel" class="card">
-        <div class="form-group">
-            <label class="form-label">Выберите квиз</label>
-            <select id="quizSelect" class="input">
-                <option value="">Загрузка...</option>
-            </select>
+        <div class="page-kicker">Подготовка</div>
+        <h2>Выберите квиз для запуска</h2>
+        <p class="text-secondary">После старта появятся PIN, ссылка для игроков и панель ведущего.</p>
+        <div class="d-flex gap-2 items-end">
+            <div class="form-group w-full">
+                <label class="form-label">Квиз</label>
+                <select id="quizSelect" class="input">
+                    <option value="">Загрузка...</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="startSession()">Запустить игру</button>
         </div>
-        <button class="btn btn-primary" onclick="startSession()">Запустить игру</button>
     </div>
 
     <div id="gamePanel" class="panel-grid" style="display:none; margin-top:20px;">

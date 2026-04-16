@@ -11,12 +11,13 @@
     <!-- Стили -->
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/constructor.css">
+    <link rel="stylesheet" href="/css/ui-modernization.css">
     
     <!-- Библиотеки -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 </head>
-<body>
-    <div class="container">
+<body class="constructor-page">
+    <div class="constructor-shell">
         <!-- НАВИГАЦИЯ -->
         <div id="app-navigation"></div>
         
@@ -48,6 +49,14 @@
 
         <!-- ОСНОВНОЙ КОНСТРУКТОР -->
         <div id="appSection" style="display: none;">
+            <header class="constructor-topbar">
+                <div>
+                    <div class="page-kicker">Конструктор квиза</div>
+                    <h1 id="constructorPageTitle">Рабочее пространство автора</h1>
+                    <p class="text-secondary">Соберите сценарий, проверьте вопросы и подготовьте квиз к запуску.</p>
+                </div>
+                <div class="save-status" id="saveStatus" aria-live="polite">Готов к работе</div>
+            </header>
             <!-- Панель действий -->
             <div class="action-bar">
                 <button class="btn btn-primary" onclick="showCreateQuizModal()">📋 Новый квиз</button>
@@ -65,12 +74,14 @@
             <!-- Двухколоночный layout -->
             <div class="constructor-layout">
                 <!-- ЛЕВАЯ КОЛОНКА -->
-                <div class="sidebar">
+                <div class="sidebar constructor-side-panel">
                     <div class="card quiz-info-card">
                         <h3 id="currentQuizTitle">Квиз не выбран</h3>
                         <p class="text-secondary" id="currentQuizDesc"></p>
-                        <div class="d-flex gap-2 mt-3">
-                            <button class="btn btn-primary btn-sm w-full" onclick="addNewQuestion()">➕ Добавить вопрос</button>
+                        <div class="outline-actions mt-3">
+                            <button class="btn btn-primary btn-sm" onclick="addQuizElement('QUESTION')">Вопрос</button>
+                            <button class="btn btn-outline btn-sm" onclick="addQuizElement('INFO_SLIDE')">Инфо</button>
+                            <button class="btn btn-outline btn-sm" onclick="addQuizElement('GAME_ROUND')">Раунд</button>
                         </div>
                         <div class="questions-list" id="questionsList">
                             <div class="empty-state">Нет вопросов</div>
@@ -81,147 +92,144 @@
                     </div>
                 </div>
 
-                <!-- ПРАВАЯ КОЛОНКА -->
-<div class="question-editor" id="questionEditor">
-    <div class="editor-placeholder" id="editorPlaceholder">
-        <p>👈 Выберите вопрос из списка или создайте новый</p>
-    </div>
-    <div id="editorContent" style="display: none;">
-        <div class="d-flex justify-between items-center mb-3">
-            <h3>Редактирование вопроса</h3>
-            <button class="btn btn-outline btn-sm" onclick="deleteCurrentQuestion()">🗑️ Удалить</button>
-        </div>
-        
-        <!-- Тип вопроса -->
-        <div class="type-selector" id="questionTypeSelector"></div>
-        
-        <!-- Текст вопроса -->
-        <div class="form-group">
-            <label class="form-label">Вопрос</label>
-            <textarea class="input" id="questionText" rows="3"></textarea>
-        </div>
-        
-        <!-- Медиа-загрузка -->
-        <div id="mediaUploadSection"></div>
-        
-        <!-- Базовые настройки: Баллы и Время -->
-        <div class="d-flex gap-3 mt-3">
-            <div class="form-group">
-                <label class="form-label">Баллы</label>
-                <input type="number" class="input" id="questionPoints" value="100" style="width: 120px;">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Время (сек)</label>
-                <input type="number" class="input" id="questionTime" value="30" style="width: 120px;">
-            </div>
-        </div>
-        
-        <!-- Ответы или Правда/Ложь -->
-        <div id="answersSection"></div>
-        <div id="trueFalseSection"></div>
-        
-        <!-- РАСШИРЕННЫЕ НАСТРОЙКИ (всегда видны) -->
-        <div class="advanced-settings-section mt-4">
-            <h4 style="margin-bottom: 16px; color: var(--text-primary); font-size: 1.1rem;">⚙️ Расширенные настройки вопроса</h4>
-            
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">🎯 Очки в начале</label>
-                    <input type="number" class="input" id="pointsAtStart" value="100" min="0">
-                    <small class="text-muted">Очки при мгновенном ответе</small>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">⏱️ Очки в конце</label>
-                    <input type="number" class="input" id="pointsAtEnd" value="100" min="0">
-                    <small class="text-muted">Очки в последнюю секунду</small>
-                </div>
-            </div>
-            
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">❌ Штраф за ошибку</label>
-                    <input type="number" class="input" id="penaltyPoints" value="0" min="0">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">⏸️ Штраф за пропуск</label>
-                    <input type="number" class="input" id="penaltyNoAnswer" value="0" min="0">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">🏆 Бонусы за скорость</label>
-                <div class="d-flex gap-2">
-                    <input type="number" class="input" id="speedBonus1" placeholder="🥇 1 место" value="0" min="0">
-                    <input type="number" class="input" id="speedBonus2" placeholder="🥈 2 место" value="0" min="0">
-                    <input type="number" class="input" id="speedBonus3" placeholder="🥉 3 место" value="0" min="0">
-                </div>
-            </div>
-            
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-checkbox">
-                        <input type="checkbox" id="autoJudge" checked> 🤖 Автоматическое судейство
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label class="form-checkbox">
-                        <input type="checkbox" id="lockoutOnWrong" checked> 🔒 Блокировать после ошибки
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label class="form-checkbox">
-                        <input type="checkbox" id="showCorrectAnswer" checked> ✅ Показывать правильный ответ
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label class="form-checkbox">
-                        <input type="checkbox" id="jokersEnabled" checked> 🃏 Джокеры разрешены
-                    </label>
-                </div>
-            </div>
-            
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">⏲️ Режим таймера</label>
-                    <select class="input" id="countdownMode">
-                        <option value="auto">Автоматический</option>
-                        <option value="manual">Ручной</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">✨ Анимация текста</label>
-                    <select class="input" id="textReveal">
-                        <option value="none">Без анимации</option>
-                        <option value="letter">По буквам</option>
-                        <option value="word">По словам</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">👥 Демографическая группа</label>
-                    <input type="text" class="input" id="demographicGroup" placeholder="Например: Мужчины">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">🔀 Ветвление (Slide ID)</label>
-                    <input type="text" class="input" id="slideRouting" placeholder="ID следующего слайда">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">📝 Заметки для ведущего</label>
-                <textarea class="input" id="questionNotes" rows="2" placeholder="Подсказки, интересные факты..."></textarea>
-            </div>
-        </div>
-        
-        <!-- Кнопки сохранения -->
-        <div class="d-flex gap-2 mt-4">
-            <button class="btn btn-primary" onclick="saveCurrentQuestion()">💾 Сохранить</button>
-            <button class="btn btn-outline" onclick="cancelEdit()">✖️ Отмена</button>
-        </div>
-    </div>
-</div>
+                <!-- ЦЕНТР: LIVE PREVIEW -->
+                <main class="question-editor studio-preview-panel" id="questionEditor">
+                    <div class="editor-placeholder" id="editorPlaceholder">
+                        <p>Выберите элемент слева или добавьте вопрос, инфо-слайд или игровой раунд.</p>
+                    </div>
+                    <div id="editorContent" class="studio-editor-content" style="display: none;">
+                        <div class="studio-canvas-toolbar">
+                            <div>
+                                <div class="page-kicker" id="previewModeLabel">Question</div>
+                                <h3 id="previewElementTitle">Рабочее полотно</h3>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-primary btn-sm" onclick="saveCurrentQuestion()">Сохранить</button>
+                                <button class="btn btn-outline btn-sm" onclick="deleteCurrentQuestion()">Удалить</button>
+                            </div>
+                        </div>
+                        <section class="slide-canvas" id="slideCanvas">
+                            <div class="slide-media-layer" id="previewMediaLayer"></div>
+                            <div class="slide-content-layer">
+                                <div class="slide-mode-pill" id="previewTypeBadge">Everyone Answers</div>
+                                <div class="slide-subtitle" id="previewSubtitle" contenteditable="true" data-placeholder="Подзаголовок или подсказка" oninput="updatePreviewField('questionSubtitle', this.textContent)"></div>
+                                <h2 id="previewQuestionText" contenteditable="true" data-placeholder="Введите текст вопроса" oninput="updatePreviewField('questionText', this.textContent)">Введите текст вопроса</h2>
+                                <div id="previewSpecialLayout"></div>
+                                <div class="preview-answers-grid" id="previewAnswersGrid"></div>
+                            </div>
+                            <div class="slide-footer">
+                                <span id="previewTimer">30 сек</span>
+                                <span id="previewPoints">100 очков</span>
+                            </div>
+                        </section>
+                    </div>
+                </main>
+                <aside class="constructor-settings-panel card">
+                    <div class="page-kicker">Свойства элемента</div>
+                    <h3>Content</h3>
+                    <p class="text-secondary">Тип выбирается на уровне вопроса или раунда.</p>
+                    <div class="form-group">
+                        <label class="form-label">Тип / режим</label>
+                        <select class="input" id="questionTypeSelect" onchange="setQuestionType(this.value)"></select>
+                    </div>
+                    <div class="type-selector" id="questionTypeSelector"></div>
+                    <div class="form-group">
+                        <label class="form-label">Текст вопроса</label>
+                        <textarea class="input" id="questionText" rows="3" oninput="syncPreviewFromProperties()"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Подзаголовок / подсказка</label>
+                        <input class="input" id="questionSubtitle" oninput="syncPreviewFromProperties()" placeholder="Например: выберите один ответ">
+                    </div>
+                    <div id="answersSection"></div>
+                    <div id="trueFalseSection"></div>
+                    <h3 class="mt-3">Media</h3>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Фон</label>
+                            <input class="input" id="backgroundColor" type="color" value="#f6f8fb" oninput="syncPreviewFromProperties()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Фон URL</label>
+                            <input class="input" id="backgroundImageUrl" placeholder="/uploads/bg.jpg" oninput="syncPreviewFromProperties()">
+                        </div>
+                    </div>
+                    <div id="mediaUploadSection"></div>
+                    <h3 class="mt-3">Scoring</h3>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Баллы</label>
+                            <input type="number" class="input" id="questionPoints" value="100" min="0" oninput="syncPreviewFromProperties()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Очки в начале</label>
+                            <input type="number" class="input" id="pointsAtStart" value="100" min="0" oninput="syncPreviewFromProperties()">
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Очки в конце</label>
+                            <input type="number" class="input" id="pointsAtEnd" value="100" min="0" oninput="syncPreviewFromProperties()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Штраф</label>
+                            <input type="number" class="input" id="penaltyPoints" value="0" min="0">
+                        </div>
+                    </div>
+                    <input type="hidden" id="penaltyNoAnswer" value="0">
+                    <div class="form-group">
+                        <label class="form-label">Бонусы / wager</label>
+                        <div class="d-flex gap-2">
+                            <input type="number" class="input" id="speedBonus1" placeholder="1 место" value="0" min="0">
+                            <input type="number" class="input" id="speedBonus2" placeholder="2 место" value="0" min="0">
+                            <input type="number" class="input" id="speedBonus3" placeholder="3 место" value="0" min="0">
+                        </div>
+                    </div>
+                    <h3 class="mt-3">Timing</h3>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Время</label>
+                            <input type="number" class="input" id="questionTime" value="30" min="0" oninput="syncPreviewFromProperties()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Таймер</label>
+                            <select class="input" id="countdownMode">
+                                <option value="auto">Автоматический</option>
+                                <option value="manual">Ручной</option>
+                            </select>
+                        </div>
+                    </div>
+                    <h3 class="mt-3">Host / Notes</h3>
+                    <div class="form-group">
+                        <label class="form-label">Заметки ведущего</label>
+                        <textarea class="input" id="questionNotes" rows="2" placeholder="Подсказки, факты, ремарки"></textarea>
+                    </div>
+                    <h3 class="mt-3">Advanced</h3>
+                    <div class="content-stack gap-1">
+                        <label class="form-checkbox"><input type="checkbox" id="autoJudge" checked> Автоматическое судейство</label>
+                        <label class="form-checkbox"><input type="checkbox" id="lockoutOnWrong" checked> Lockout после ошибки / buzzer</label>
+                        <label class="form-checkbox"><input type="checkbox" id="showCorrectAnswer" checked> Показывать правильный ответ</label>
+                        <label class="form-checkbox"><input type="checkbox" id="jokersEnabled" checked> Джокеры / подсказки</label>
+                    </div>
+                    <div class="grid-2 mt-3">
+                        <div class="form-group">
+                            <label class="form-label">Группа</label>
+                            <input type="text" class="input" id="demographicGroup" placeholder="Например: мужчины">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ветвление</label>
+                            <input type="text" class="input" id="slideRouting" placeholder="ID следующего слайда">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Анимация текста</label>
+                        <select class="input" id="textReveal">
+                            <option value="none">Без анимации</option>
+                            <option value="letter">По буквам</option>
+                            <option value="word">По словам</option>
+                        </select>
+                    </div>
+                </aside>
             </div>
         </div>
     </div>

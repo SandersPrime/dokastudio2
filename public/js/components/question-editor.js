@@ -15,19 +15,23 @@ const QuestionEditorComponent = {
       return;
     }
 
+    this.showEditorContent();
     this.applyQuestionTypeUI(question.type);
     this.populateQuestionForm(question);
     this.renderAnswersEditor(question.answers);
     this.syncMediaPreview(question);
     this.renderQuestionSpecificInputs(question);
+    this.renderStudioPreview(question);
   },
 
   /**
    * Очищает редактор.
    */
   clearEditor() {
+    this.showEditorPlaceholder();
     const elements = [
-      'questionText', 'questionPoints', 'questionTime',
+      'questionText', 'questionSubtitle', 'questionPoints', 'questionTime',
+      'questionTypeSelect', 'backgroundColor', 'backgroundImageUrl',
       'pointsAtStart', 'pointsAtEnd', 'penaltyPoints',
       'penaltyNoAnswer', 'speedBonus1', 'speedBonus2', 'speedBonus3',
       'countdownMode', 'textReveal', 'demographicGroup',
@@ -48,6 +52,21 @@ const QuestionEditorComponent = {
 
     this.clearMediaPreview();
     this.clearAnswersEditor();
+    this.renderStudioPreview(null);
+  },
+
+  showEditorContent() {
+    const placeholder = document.getElementById('editorPlaceholder');
+    const content = document.getElementById('editorContent');
+    if (placeholder) placeholder.style.display = 'none';
+    if (content) content.style.display = 'block';
+  },
+
+  showEditorPlaceholder() {
+    const placeholder = document.getElementById('editorPlaceholder');
+    const content = document.getElementById('editorContent');
+    if (placeholder) placeholder.style.display = 'grid';
+    if (content) content.style.display = 'none';
   },
 
   /**
@@ -59,9 +78,13 @@ const QuestionEditorComponent = {
     const trueFalseSection = document.getElementById('trueFalseSection');
     const answersSection = document.getElementById('answersSection');
 
-    if (mediaSection) mediaSection.style.display = ['IMAGE', 'AUDIO', 'VIDEO'].includes(type) ? 'block' : 'none';
-    if (trueFalseSection) trueFalseSection.style.display = type === 'TRUEFALSE' ? 'block' : 'none';
-    if (answersSection) answersSection.style.display = type !== 'TRUEFALSE' ? 'block' : 'none';
+    if (mediaSection) mediaSection.style.display = 'block';
+    if (trueFalseSection) trueFalseSection.style.display = ['TRUEFALSE', 'TRUE_FALSE'].includes(type) ? 'block' : 'none';
+    if (answersSection) answersSection.style.display = ['INFO_SLIDE', 'ROUND_INTRO', 'JEOPARDY_ROUND'].includes(type) ? 'none' : 'block';
+
+    document.querySelectorAll('.type-btn').forEach((button) => {
+      button.classList.toggle('active', button.dataset.type === type);
+    });
   },
 
   /**
@@ -71,8 +94,12 @@ const QuestionEditorComponent = {
   populateQuestionForm(question) {
     const fields = {
       'questionText': question.text,
+      'questionSubtitle': question.subtitle,
       'questionPoints': question.points,
       'questionTime': question.timeLimit,
+      'questionTypeSelect': question.type,
+      'backgroundColor': question.backgroundColor || '#f6f8fb',
+      'backgroundImageUrl': question.backgroundImageUrl,
       'pointsAtStart': question.pointsAtStart,
       'pointsAtEnd': question.pointsAtEnd,
       'penaltyPoints': question.penaltyPoints,
@@ -99,7 +126,7 @@ const QuestionEditorComponent = {
     });
 
     // Special case for true/false
-    if (question.type === 'TRUEFALSE') {
+    if (question.type === 'TRUEFALSE' || question.type === 'TRUE_FALSE') {
       const select = document.getElementById('trueFalseSelect');
       if (select) {
         const correctAnswer = question.answers?.find(a => a.isCorrect);
@@ -125,7 +152,7 @@ const QuestionEditorComponent = {
             class="input answer-input flex-1"
             value="${this.escapeHtml(answer.text)}"
             placeholder="Введите ответ..."
-            oninput="updateAnswerText(${index}, this.value)"
+            oninput="updateAnswerText(${index}, this.value); syncPreviewFromProperties()"
           >
           <button type="button" class="btn btn-success btn-xs" onclick="setCorrectAnswer(${index})">
             ${answer.isCorrect ? '✅' : '☑️'}
@@ -142,9 +169,89 @@ const QuestionEditorComponent = {
    */
   renderQuestionSpecificInputs(question) {
     // Можно расширить для других типов
-    if (question.type === 'TRUEFALSE') {
+    if (question.type === 'TRUEFALSE' || question.type === 'TRUE_FALSE') {
       this.updateTrueFalseUI(question);
     }
+  },
+
+  renderStudioPreview(question) {
+    const canvas = document.getElementById('slideCanvas');
+    const title = document.getElementById('previewQuestionText');
+    const subtitle = document.getElementById('previewSubtitle');
+    const typeBadge = document.getElementById('previewTypeBadge');
+    const modeLabel = document.getElementById('previewModeLabel');
+    const elementTitle = document.getElementById('previewElementTitle');
+    const answersGrid = document.getElementById('previewAnswersGrid');
+    const mediaLayer = document.getElementById('previewMediaLayer');
+    const special = document.getElementById('previewSpecialLayout');
+    const timer = document.getElementById('previewTimer');
+    const points = document.getElementById('previewPoints');
+
+    if (!canvas || !title || !answersGrid) return;
+
+    if (!question) {
+      title.textContent = 'Введите текст вопроса';
+      if (subtitle) subtitle.textContent = '';
+      answersGrid.innerHTML = '';
+      if (special) special.innerHTML = '';
+      return;
+    }
+
+    const type = question.type || 'EVERYONE_ANSWERS';
+    const typeLabel = this.getQuestionTypeLabel(type);
+    canvas.dataset.mode = type;
+    canvas.style.backgroundColor = question.backgroundColor || '#f6f8fb';
+    canvas.style.backgroundImage = question.backgroundImageUrl ? `url("${question.backgroundImageUrl}")` : 'none';
+
+    title.textContent = question.text || 'Введите текст вопроса';
+    if (subtitle) subtitle.textContent = question.subtitle || '';
+    if (typeBadge) typeBadge.textContent = typeLabel;
+    if (modeLabel) modeLabel.textContent = question.layoutType || 'QUESTION';
+    if (elementTitle) elementTitle.textContent = typeLabel;
+    if (timer) timer.textContent = `${question.timeLimit || 30} сек`;
+    if (points) points.textContent = `${question.points || 100} очков`;
+    if (mediaLayer) mediaLayer.innerHTML = this.renderPreviewMedia(question);
+    if (special) special.innerHTML = this.renderSpecialLayout(question);
+
+    const answers = Array.isArray(question.answers) ? question.answers : [];
+    answersGrid.style.display = ['INFO_SLIDE', 'ROUND_INTRO', 'JEOPARDY_ROUND'].includes(type) ? 'none' : 'grid';
+    answersGrid.innerHTML = answers.map((answer, index) => `
+      <button class="preview-answer ${answer.isCorrect ? 'correct' : ''}" type="button">
+        <span>${String.fromCharCode(65 + index)}</span>
+        <strong contenteditable="true" oninput="updateAnswerText(${index}, this.textContent); syncPreviewFromProperties()">${this.escapeHtml(answer.text || `Ответ ${index + 1}`)}</strong>
+      </button>
+    `).join('');
+  },
+
+  renderPreviewMedia(question) {
+    if (question.imageUrl) return `<img src="${question.imageUrl}" alt="">`;
+    if (question.videoUrl) return `<video controls src="${question.videoUrl}"></video>`;
+    if (question.audioUrl) return `<div class="preview-audio-chip">Audio attached</div><audio controls src="${question.audioUrl}"></audio>`;
+    return '';
+  },
+
+  renderSpecialLayout(question) {
+    const type = question.type || 'EVERYONE_ANSWERS';
+
+    if (type === 'JEOPARDY_ROUND') {
+      const categories = ['Тема 1', 'Тема 2', 'Тема 3', 'Тема 4'];
+      const values = [100, 200, 300, 400, 500];
+      return `<div class="jeopardy-grid">${categories.map((category) => `<div class="jeopardy-cell jeopardy-head">${category}</div>`).join('')}${values.flatMap((value) => categories.map(() => `<div class="jeopardy-cell">${value}</div>`)).join('')}</div>`;
+    }
+
+    if (type === 'MILLIONAIRE_ROUND') {
+      return `<div class="millionaire-layout">${[1000000, 500000, 250000, 125000, 64000, 32000, 16000, 8000, 4000, 2000, 1000].map((value, index) => `<div class="ladder-step ${index === 0 ? 'top' : ''}">${value.toLocaleString('ru-RU')} ₽</div>`).join('')}</div>`;
+    }
+
+    const callouts = {
+      FASTEST_FINGER: 'Fastest response wins. Lockout is enabled for buzzer-style play.',
+      WAGER: 'Players choose a wager before answering.',
+      MAJORITY_RULES: 'Reveal popular answers one by one, Family Feud style.',
+      DECREASING_POINTS: 'Score decreases from start points to end points while time runs.',
+      LAST_MAN_STANDING: 'Wrong answers eliminate players until one remains.',
+    };
+
+    return callouts[type] ? `<div class="mode-callout">${callouts[type]}</div>` : '';
   },
 
   /**
@@ -201,6 +308,30 @@ const QuestionEditorComponent = {
   clearAnswersEditor() {
     const container = document.getElementById('answersEditor');
     if (container) container.innerHTML = '';
+  },
+
+  getQuestionTypeLabel(type) {
+    const labels = {
+      EVERYONE_ANSWERS: 'Everyone Answers',
+      FASTEST_FINGER: 'Fastest Finger',
+      MULTIPLE_CORRECT: 'Multiple Correct',
+      ORDERED: 'Ordered',
+      TRUEFALSE: 'True / False',
+      TRUE_FALSE: 'True / False',
+      TEXT: 'Text',
+      IMAGE: 'Image',
+      AUDIO: 'Audio',
+      VIDEO: 'Video',
+      DECREASING_POINTS: 'Decreasing Points',
+      WAGER: 'Wager',
+      MAJORITY_RULES: 'Majority Rules',
+      LAST_MAN_STANDING: 'Last Man Standing',
+      JEOPARDY_ROUND: 'Jeopardy Round',
+      MILLIONAIRE_ROUND: 'Millionaire Round',
+      INFO_SLIDE: 'Info Slide',
+      ROUND_INTRO: 'Round Intro',
+    };
+    return labels[type] || type;
   },
 
   /**

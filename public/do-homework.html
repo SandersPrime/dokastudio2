@@ -63,11 +63,15 @@
         .review-row.wrong { border-color: rgba(239,68,68,.35); }
         .big-score { font-size: 48px; font-weight: 800; }
     </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
 </head>
 <body>
 <div class="student-page">
     <div class="d-flex justify-between items-center mb-3">
-        <h1>Homework</h1>
+        <div>
+            <div class="page-kicker">Задание</div>
+            <h1>Homework</h1>
+        </div>
         <div id="studentNameDisplay" class="text-secondary"></div>
     </div>
 
@@ -75,6 +79,7 @@
 
     <section id="joinScreen" data-screen class="card">
         <h2>Войти в homework</h2>
+        <p class="text-secondary">Введите PIN задания и имя, чтобы открыть попытку.</p>
         <div class="form-group">
             <label class="form-label">PIN-код</label>
             <input id="pinInput" class="input" maxlength="6" inputmode="numeric" placeholder="123456">
@@ -83,7 +88,7 @@
             <label class="form-label">Ваше имя</label>
             <input id="studentNameInput" class="input" maxlength="80" placeholder="Например, Анна">
         </div>
-        <button class="btn btn-primary" onclick="loadHomeworkPreview()">Продолжить</button>
+        <button class="btn btn-primary w-full" onclick="loadHomeworkPreview()">Продолжить</button>
     </section>
 
     <section id="previewScreen" data-screen class="card" style="display:none;">

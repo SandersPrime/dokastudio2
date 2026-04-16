@@ -53,11 +53,13 @@
             .catalog-toolbar { grid-template-columns: 1fr; }
         }
     </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
 </head>
 <body>
 <main class="catalog-page">
-    <div class="d-flex justify-between items-center">
+    <div class="page-header">
         <div>
+            <div class="page-kicker">Каталог</div>
             <h1>Каталог шаблонов</h1>
             <p class="text-secondary">Готовые опубликованные квизы, которые можно добавить себе.</p>
         </div>
@@ -67,6 +69,7 @@
     <div id="catalogStatus" class="status-box"></div>
 
     <section class="card">
+        <div class="page-kicker">Фильтры</div>
         <div class="catalog-toolbar">
             <div>
                 <label class="form-label">Поиск</label>

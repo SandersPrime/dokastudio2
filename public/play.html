@@ -76,16 +76,21 @@
             background: rgba(255,255,255,.04);
         }
     </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
 </head>
 <body>
 <div class="play-page">
     <div class="d-flex justify-between items-center mb-3">
-        <h1>Игрок</h1>
+        <div>
+            <div class="page-kicker">Игрок</div>
+            <h1>Вход в игру</h1>
+        </div>
         <div id="scoreDisplay" class="score-pill" style="display:none;">0 pts</div>
     </div>
 
     <div id="joinScreen" data-screen class="card">
         <h2>Подключение к игре</h2>
+        <p class="text-secondary">Введите PIN с экрана ведущего и имя, которое увидят другие игроки.</p>
         <div class="form-group">
             <label class="form-label">PIN-код</label>
             <input id="pinInput" class="input" maxlength="6" inputmode="numeric" placeholder="123456">
@@ -94,11 +99,12 @@
             <label class="form-label">Ваше имя</label>
             <input id="nicknameInput" class="input" maxlength="40" placeholder="Например, Константин">
         </div>
-        <button class="btn btn-primary" onclick="joinGame()">Войти</button>
+        <button class="btn btn-primary w-full" onclick="joinGame()">Войти</button>
         <div id="joinStatus" class="status-toast"></div>
     </div>
 
     <div id="waitingScreen" data-screen class="card center-box" style="display:none;">
+        <div class="page-kicker">Лобби</div>
         <h2>Вы в лобби</h2>
         <div id="playerNameDisplay" class="big-score" style="font-size:32px; margin:16px 0;"></div>
         <div class="text-secondary">Ожидаем начала игры...</div>
@@ -127,6 +133,7 @@
     </div>
 
     <div id="pausedScreen" data-screen class="card center-box" style="display:none;">
+        <div class="page-kicker">Пауза</div>
         <h2>Игра на паузе</h2>
         <div class="text-secondary mt-3">Ждём продолжения от ведущего</div>
     </div>

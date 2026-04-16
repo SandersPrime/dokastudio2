@@ -17,13 +17,15 @@ const Modals = {
                         <label class="form-label">Описание</label>
                         <textarea class="input" id="newQuizDesc" rows="3" placeholder="О чём этот квиз?"></textarea>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Режим игры</label>
-                        <select class="input" id="gameMode">
-                            <option value="standard">Стандартный</option>
-                            <option value="lastmanstanding">Last Man Standing</option>
-                            <option value="speedround">Speed Round</option>
-                        </select>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Категория</label>
+                            <input type="text" class="input" id="newQuizCategory" maxlength="80" placeholder="Например: история">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Обложка</label>
+                            <input type="url" class="input" id="newQuizThumbnailUrl" placeholder="https://... или /uploads/...">
+                        </div>
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary" onclick="createQuiz()">Создать</button>
@@ -34,10 +36,41 @@ const Modals = {
 
             <!-- Модалка списка квизов -->
             <div class="preview-modal" id="quizzesListModal">
-                <div class="preview-content" style="max-width: 600px;">
+                <div class="preview-content" style="max-width: 760px;">
                     <h2>📂 Мои квизы</h2>
                     <div id="myQuizzesList" style="max-height: 400px; overflow-y: auto;"></div>
                     <button class="btn btn-outline w-full mt-3" onclick="closeModal('quizzesListModal')">Закрыть</button>
+                </div>
+            </div>
+
+            <!-- Модалка редактирования метаданных квиза -->
+            <div class="preview-modal" id="editQuizModal">
+                <div class="preview-content" style="max-width: 680px;">
+                    <h2>✏️ Настройки квиза</h2>
+                    <input type="hidden" id="editQuizId">
+                    <div class="form-group">
+                        <label class="form-label">Название</label>
+                        <input type="text" class="input" id="editQuizTitle" maxlength="160" placeholder="Название квиза">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Описание</label>
+                        <textarea class="input" id="editQuizDescription" rows="4" maxlength="2000" placeholder="Кратко опишите сценарий и аудиторию"></textarea>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Категория</label>
+                            <input type="text" class="input" id="editQuizCategory" maxlength="80" placeholder="Например: школа">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Обложка</label>
+                            <input type="url" class="input" id="editQuizThumbnailUrl" placeholder="https://... или /uploads/...">
+                        </div>
+                    </div>
+                    <div id="editQuizError" class="status-toast error"></div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-primary" onclick="saveQuizMeta()">Сохранить</button>
+                        <button class="btn btn-outline" onclick="closeModal('editQuizModal')">Отмена</button>
+                    </div>
                 </div>
             </div>
 

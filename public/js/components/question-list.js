@@ -19,6 +19,7 @@ const QuestionListComponent = {
       const text = question.text || 'Без текста';
       const typeLabel = this.getQuestionTypeLabel(question.type);
       const isActive = index === currentQuestionIndex;
+      const layoutLabel = question.layoutType || 'QUESTION';
 
       return `
         <div class="question-item ${isActive ? 'active' : ''}" data-id="${question.id || question.tempId}" draggable="true">
@@ -28,6 +29,7 @@ const QuestionListComponent = {
               <div class="question-text">${this.escapeHtml(text)}</div>
               <div class="question-meta">
                 <span class="badge">${typeLabel}</span>
+                <span>${layoutLabel}</span>
                 <span>${question.points} баллов</span>
                 <span>${question.timeLimit} сек</span>
               </div>
@@ -47,12 +49,24 @@ const QuestionListComponent = {
   getQuestionTypeLabel(type) {
     const labels = {
       TEXT: 'Текст',
+      EVERYONE_ANSWERS: 'Everyone Answers',
+      FASTEST_FINGER: 'Fastest Finger',
+      MULTIPLE_CORRECT: 'Multiple Correct',
       IMAGE: 'Изображение',
       AUDIO: 'Аудио',
       VIDEO: 'Видео',
       TRUEFALSE: 'Правда/Ложь',
+      TRUE_FALSE: 'Правда/Ложь',
       MULTIPLE: 'Выбор',
       ORDERED: 'Сортировка',
+      DECREASING_POINTS: 'Decreasing Points',
+      WAGER: 'Wager',
+      MAJORITY_RULES: 'Majority Rules',
+      LAST_MAN_STANDING: 'Last Man Standing',
+      JEOPARDY_ROUND: 'Jeopardy Round',
+      MILLIONAIRE_ROUND: 'Millionaire Round',
+      INFO_SLIDE: 'Info Slide',
+      ROUND_INTRO: 'Round Intro',
       RATING: 'Рейтинг',
       WORDCLOUD: 'Облако слов',
       MAJORITYRULES: 'Большинство',
