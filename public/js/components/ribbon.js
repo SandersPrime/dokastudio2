@@ -1,630 +1,712 @@
-// public/js/components/ribbon.js
-
+﻿// public/js/components/ribbon.js
 window.DOKA_USE_COMPONENT_RIBBON = true;
 
 (function () {
-  const STORAGE_KEY = 'dokastudio.constructor.ribbon.activeTab';
+  const QUESTION = 'QUESTION';
 
-  const tabs = [
-    { id: 'quiz', label: 'Викторина', always: true },
-    { id: 'insert', label: 'Вставка', always: true },
-    { id: 'mode', label: 'Режим / Тип', always: true },
-    { id: 'media', label: 'Медиа / Дизайн', always: true },
-    { id: 'view', label: 'Вид', always: true },
-    { id: 'host', label: 'Ведущий', always: true },
+  const SLIDE_TYPES = [
+    {
+      id: 'QUESTION',
+      title: 'Вопрос',
+      icon: 'Q',
+      desc: 'Обычный игровой слайд с вопросом, ответами, таймером, очками и логикой ответа.',
+    },
+    {
+      id: 'INFO_SLIDE',
+      title: 'Информационный слайд',
+      icon: 'i',
+      desc: 'Слайд без ответов, для правил, объявлений, пояснений и переходов между частями игры.',
+    },
+    {
+      id: 'ROUND_END',
+      title: 'Конец раунда',
+      icon: 'R',
+      desc: 'Слайд завершения раунда с промежуточным итогом, переходом к следующей части и действиями конца раунда.',
+    },
+    {
+      id: 'DEMOGRAPHIC',
+      title: 'Демографический слайд',
+      icon: 'D',
+      desc: 'Слайд для разделения участников на группы по выбранному признаку.',
+    },
+    {
+      id: 'LAST_MAN_STANDING',
+      title: 'Последний выживший',
+      icon: 'L',
+      desc: 'Формат, где все отвечают, а участники с неправильным ответом выбывают.',
+    },
+    {
+      id: 'AUDIENCE_RESPONSE',
+      title: 'Опрос аудитории',
+      icon: 'A',
+      desc: 'Слайд для сбора ответов без влияния на очки, с возможностью показать распределение ответов.',
+    },
+    {
+      id: 'WAGER',
+      title: 'Ставка',
+      icon: 'S',
+      desc: 'Слайд, где игроки делают ставку перед следующим вопросом.',
+    },
+    {
+      id: 'MAJORITY_RULES',
+      title: 'Правила большинства',
+      icon: 'M',
+      desc: 'Слайд, где правильным считается самый популярный ответ аудитории.',
+    },
+    {
+      id: 'TRIVIA_BOARD',
+      title: 'Табло вопросов',
+      icon: 'T',
+      desc: 'Игровое табло в стиле выбора тем и стоимости вопросов.',
+    },
+    {
+      id: 'TRIVIA_LADDER',
+      title: 'Лестница',
+      icon: 'L',
+      desc: 'Раунд в формате последовательного продвижения по уровням с несгораемыми точками.',
+    },
+    {
+      id: 'TRIVIA_FEUD',
+      title: '100 к 1',
+      icon: 'F',
+      desc: 'Раунд с популярными ответами и логикой угадывания самых частых вариантов.',
+    },
+    {
+      id: 'SPEED_ROUND',
+      title: 'Быстрый раунд',
+      icon: 'S',
+      desc: 'Серия быстрых вопросов подряд с общим ограничением по времени.',
+    },
+    {
+      id: 'BINGO',
+      title: 'Бинго',
+      icon: 'B',
+      desc: 'Раунд бинго с шаблонами победы, проверкой заявок и отдельной игровой логикой.',
+    },
+    {
+      id: 'GAME_MODULE',
+      title: 'Игровой модуль',
+      icon: 'G',
+      desc: 'Отдельный мини-игровой модуль, который запускается как самостоятельная часть шоу.',
+    },
   ];
 
-  const commands = {
-    quiz: [
-      group('Викторина', [
-        action('Новая викторина', '＋', () => call('showCreateQuizModal'), { allowNoQuiz: true }),
-        action('Открыть викторину', '▤', () => call('loadMyQuizzes'), { allowNoQuiz: true }),
-        action('Сохранить', '💾', () => call('saveCurrentQuestion'), { requiresQuestion: true }),
-        action('Сохранить всё', '💾', () => call('saveAllQuizChanges'), { requiresQuiz: true }),
-        action('Сохранить элемент', '✦', () => call('saveCurrentQuestion'), { requiresQuestion: true }),
-      ]),
-      group('Проверка', [
-        action('Предпросмотр', '▶', () => call('previewQuiz'), { requiresQuiz: true }),
-        action('Опубликовать', '✓', () => call('publishQuiz'), { requiresQuiz: true }),
-      ]),
-    ],
-    insert: [
-      group('Вставка', [
-        action('Добавить вопрос', '？', () => call('addQuizElement', 'QUESTION'), { requiresQuiz: true }),
-        action('Добавить инфо-слайд', 'i', () => call('addQuizElement', 'INFO_SLIDE'), { requiresQuiz: true }),
-        action('Добавить вступление раунда', 'R', () => call('addQuizElement', 'ROUND_INTRO'), { requiresQuiz: true }),
-        action('Добавить игровой раунд', '▦', () => call('addQuizElement', 'GAME_ROUND'), { requiresQuiz: true }),
-      ]),
-      group('Быстрый режим', [
-        action('Вопрос: все отвечают', 'A', () => addTypedQuestion('EVERYONE_ANSWERS'), { requiresQuiz: true }),
-        action('Вопрос: кто быстрее', 'F', () => addTypedQuestion('FASTEST_FINGER'), { requiresQuiz: true }),
-        action('Вопрос: несколько верных', 'M', () => addTypedQuestion('MULTIPLE_CORRECT'), { requiresQuiz: true }),
-        action('Вопрос: верный порядок', 'O', () => addTypedQuestion('ORDERED'), { requiresQuiz: true }),
-      ]),
-    ],
-    mode: [
-      group('Режим ответа', [
-        action('Все отвечают', 'A', () => setSelectedMode('EVERYONE_ANSWERS'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'EVERYONE_ANSWERS' }),
-        action('Кто быстрее', 'F', () => setSelectedMode('FASTEST_FINGER'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'FASTEST_FINGER' }),
-        action('Несколько правильных', 'M', () => setSelectedMode('MULTIPLE_CORRECT'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'MULTIPLE_CORRECT' }),
-        action('Верный порядок', 'O', () => setSelectedMode('ORDERED'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'ORDERED' }),
-        action('Правда / Ложь', 'T', () => setSelectedMode('TRUE_FALSE'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'TRUE_FALSE' }),
-      ]),
-      group('Тип вопроса', [
-        action('Текстовый вопрос', 'Tx', () => setSelectedMode('TEXT'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'TEXT' }),
-        action('Вопрос с изображением', '🖼', () => setSelectedMode('IMAGE'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'IMAGE' }),
-        action('Вопрос с аудио', '♪', () => setSelectedMode('AUDIO'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'AUDIO' }),
-        action('Вопрос с видео', '▶', () => setSelectedMode('VIDEO'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'VIDEO' }),
-      ]),
-      group('Скоринг', [
-        action('Убывающие очки', '⇣', () => setSelectedMode('DECREASING_POINTS'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'DECREASING_POINTS' }),
-        action('Ставка', '$', () => setSelectedMode('WAGER'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'WAGER' }),
-        action('Большинство / Семейная', '♣', () => setSelectedMode('MAJORITY_RULES'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'MAJORITY_RULES' }),
-        action('Последний выживший', '⚡', () => setSelectedMode('LAST_MAN_STANDING'), { requiresQuestion: true, modeGroup: 'question', activeMode: 'LAST_MAN_STANDING' }),
-      ]),
-      group('Игровые раунды', [
-        action('Раунд «Своя игра»', '▦', () => setSelectedMode('JEOPARDY_ROUND'), { requiresQuestion: true, modeGroup: 'round', activeMode: 'JEOPARDY_ROUND' }),
-        action('Раунд «Миллионер»', '◆', () => setSelectedMode('MILLIONAIRE_ROUND'), { requiresQuestion: true, modeGroup: 'round', activeMode: 'MILLIONAIRE_ROUND' }),
-      ]),
-    ],
-    media: [
-      group('Медиа', [
-        action('Фон', '▤', () => focusPanelSection('media'), { requiresQuestion: true }),
-        action('Изображение', '🖼', () => openMedia('image/*'), { requiresQuestion: true }),
-        action('Видео', '🎞', () => openMedia('video/*'), { requiresQuestion: true }),
-        action('Аудио', '♪', () => openMedia('audio/*'), { requiresQuestion: true }),
-      ]),
-      group('Дизайн', [
-        action('Тема / стиль', '✎', () => focusPanelSection('appearance'), { requiresQuestion: true }),
-        action('Шаблоны', '▦', () => focusPanelSection('templates'), { requiresQuestion: true }),
-      ]),
-    ],
-    view: [
-      group('Вид', [
-        toggle('Фокус на превью', '▣', 'focusPreview', false, setPreviewFocus),
-        toggle('Правая панель свойств', '⚙', 'showProps', true, setPanelVisibility),
-        toggle('Левая структура', '▥', 'showThumbs', true, setPanelVisibility),
-      ]),
-    ],
-    host: [
-      group('Игровой показ', [
-        action('Заметки ведущего', '✎', () => focusPanelSection('host-notes'), { requiresQuestion: true }),
-        action('Параметры показа', '▶', () => focusPanelSection('timing'), { requiresQuestion: true }),
-        action('Настройки табло', '▤', () => focusPanelSection('scoring'), { requiresQuestion: true }),
-        action('Поведение таймера', '⏱', () => focusPanelSection('timing'), { requiresQuestion: true }),
-        action('Показ ответа', '✓', () => focusPanelSection('advanced'), { requiresQuestion: true }),
-      ]),
-    ],
+  const SPECIAL_SECTIONS = {
+    ROUND_END: { id: 'specialRoundEndSection', title: 'Конец раунда' },
+    DEMOGRAPHIC: { id: 'specialDemographicSection', title: 'Демографический слайд' },
+    LAST_MAN_STANDING: { id: 'specialLastManSection', title: 'Последний выживший' },
+    AUDIENCE_RESPONSE: { id: 'specialAudienceSection', title: 'Опрос аудитории' },
+    WAGER: { id: 'specialWagerSection', title: 'Ставка' },
+    MAJORITY_RULES: { id: 'specialMajoritySection', title: 'Правила большинства' },
+    TRIVIA_BOARD: { id: 'specialTriviaBoardSection', title: 'Табло вопросов' },
+    TRIVIA_LADDER: { id: 'specialTriviaLadderSection', title: 'Лестница' },
+    TRIVIA_FEUD: { id: 'specialTriviaFeudSection', title: '100 к 1' },
+    SPEED_ROUND: { id: 'specialSpeedRoundSection', title: 'Быстрый раунд' },
+    BINGO: { id: 'specialBingoSection', title: 'Бинго' },
+    GAME_MODULE: { id: 'specialGameModuleSection', title: 'Игровой модуль' },
   };
 
-  function action(label, icon, handler, options = {}) {
-    return { kind: 'action', label, icon, handler, ...options };
-  }
+  const val = (id, fallback = '') => document.getElementById(id)?.value ?? fallback;
+  const set = (id, value, fallback = '') => {
+    const node = document.getElementById(id);
+    if (node) node.value = value ?? fallback;
+  };
+  const show = (id, visible) => {
+    const node = document.getElementById(id);
+    if (node) node.style.display = visible ? '' : 'none';
+  };
 
-  function toggle(label, icon, key, defaultValue, handler = null) {
-    return { kind: 'toggle', label, icon, key, defaultValue, handler };
-  }
-
-  function group(label, items) {
-    return { label, items };
-  }
-
-  function init() {
-    const toolbar = document.querySelector('.constructor-settings-panel');
-    if (!toolbar || toolbar.dataset.componentRibbonReady === 'true') return;
-
-    toolbar.classList.add('doka-ribbon');
-    toolbar.dataset.componentRibbonReady = 'true';
-
-    wrapExistingSections(toolbar);
-    buildRibbonShell(toolbar);
-    setActiveTab(localStorage.getItem(STORAGE_KEY) || 'quiz');
-    bindShortcuts();
-    refresh();
-  }
-
-  function wrapExistingSections(toolbar) {
-    toolbar.querySelectorAll(':scope > .panel-section').forEach((section) => {
-      if (!section.querySelector(':scope > .panel-section-body')) {
-        const title = section.querySelector('h3');
-        const body = document.createElement('div');
-        body.className = 'panel-section-body';
-        Array.from(section.children).forEach((child) => {
-          if (child !== title) body.appendChild(child);
-        });
-        section.appendChild(body);
-      }
-      section.classList.add('doka-ribbon-group', 'doka-source-group');
-      section.dataset.ribbonTabs = getSourceTabs(section);
-    });
-  }
-
-  function getSourceTabs(section) {
-    const title = section.querySelector('h3')?.textContent.trim().toLowerCase() || '';
-    const map = {
-      контент: 'mode',
-      медиа: 'media',
-      оформление: 'media',
-      шаблоны: 'media',
-      скоринг: 'host',
-      тайминг: 'host',
-      'заметки ведущего': 'host',
-      дополнительно: 'host',
-    };
-    return map[title] || 'mode';
-  }
-
-  function buildRibbonShell(toolbar) {
-    const header = toolbar.querySelector('.panel-header');
-    if (header) {
-      header.classList.add('doka-ribbon-brand');
-      header.innerHTML = '<strong>DokaStudio</strong><span id="ribbonContextLabel">Панель конструктора</span>';
+  function parseConfig(question) {
+    try {
+      if (!question?.configJson) return {};
+      return typeof question.configJson === 'string' ? JSON.parse(question.configJson) : question.configJson;
+    } catch {
+      return {};
     }
-
-    const tabsNode = document.createElement('div');
-    tabsNode.className = 'doka-ribbon-tabs';
-    tabsNode.innerHTML = `
-      <button type="button" class="doka-ribbon-menu" aria-label="Toolbar menu" onclick="DokaRibbon.toggleMobile()">☰</button>
-      <div class="doka-ribbon-tab-list">
-        ${tabs.map((tab) => `<button type="button" class="doka-ribbon-tab" data-ribbon-tab="${tab.id}" onclick="DokaRibbon.setActiveTab('${tab.id}')">${tab.label}</button>`).join('')}
-      </div>
-      <select class="doka-ribbon-select" onchange="DokaRibbon.setActiveTab(this.value)">
-        ${tabs.map((tab) => `<option value="${tab.id}">${tab.label}</option>`).join('')}
-      </select>
-    `;
-
-    const content = document.createElement('div');
-    content.className = 'doka-ribbon-content';
-
-    toolbar.insertBefore(tabsNode, toolbar.firstChild);
-    toolbar.appendChild(content);
-
-    Object.entries(commands).forEach(([tabId, groups]) => {
-      groups.forEach((entry) => content.appendChild(renderCommandGroup(tabId, entry)));
-    });
-
-    toolbar.querySelectorAll(':scope > .panel-section').forEach((section) => {
-      if (!section.dataset.generatedRibbonGroup) content.appendChild(section);
-    });
   }
 
-  function renderCommandGroup(tabId, entry) {
-    const section = document.createElement('section');
-    section.className = 'panel-section doka-ribbon-group doka-command-group';
-    section.dataset.ribbonTabs = tabId;
-    section.dataset.generatedRibbonGroup = 'true';
-    section.innerHTML = `
-      <h3>${escapeHtml(entry.label)}</h3>
-      <div class="panel-section-body doka-ribbon-buttons">
-        ${entry.items.map(renderCommand).join('')}
-      </div>
-    `;
-    return section;
-  }
-
-  function renderCommand(item) {
-    if (item.kind === 'toggle') {
-      const checked = localStorage.getItem(`dokastudio.ribbon.${item.key}`) ?? String(item.defaultValue);
-      return `
-        <button type="button" class="doka-ribbon-button doka-ribbon-toggle ${checked === 'true' ? 'active' : ''}" data-toggle-key="${item.key}" onclick="DokaRibbon.runToggle('${item.key}')">
-          <span>${item.icon}</span><b>${item.label}</b>
-        </button>
-      `;
-    }
-    const id = registerHandler(item.handler);
-    return `
-      <button type="button" class="doka-ribbon-button" data-handler-id="${id}" ${item.requiresQuestion ? 'data-requires-question="true"' : ''} ${item.requiresQuiz ? 'data-requires-quiz="true"' : ''} ${item.modeGroup ? `data-mode-group="${item.modeGroup}"` : ''} ${item.allowNoQuiz ? 'data-allow-no-quiz="true"' : ''} ${item.activeMode ? `data-mode="${item.activeMode}"` : ''} onclick="DokaRibbon.runHandler('${id}')">
-        <span>${item.icon}</span><b>${item.label}</b>
-      </button>
-    `;
-  }
-
-  const handlers = new Map();
-  let handlerIndex = 0;
-  function registerHandler(handler) {
-    const id = `h${handlerIndex++}`;
-    handlers.set(id, handler);
-    return id;
-  }
-
-  function setActiveTab(tabId) {
-    const toolbar = document.querySelector('.constructor-settings-panel');
-    if (!toolbar) return;
-
-    const visibleTabs = getVisibleTabs();
-    const fallback = visibleTabs.some((tab) => tab.id === tabId) ? tabId : 'quiz';
-    toolbar.dataset.activeRibbonTab = fallback;
-    localStorage.setItem(STORAGE_KEY, fallback);
-
-    toolbar.querySelectorAll('.doka-ribbon-tab').forEach((button) => {
-      const tab = tabs.find((item) => item.id === button.dataset.ribbonTab);
-      const isVisible = visibleTabs.includes(tab);
-      button.hidden = !isVisible;
-      button.classList.toggle('active', button.dataset.ribbonTab === fallback);
-    });
-
-    const select = toolbar.querySelector('.doka-ribbon-select');
-    if (select) {
-      select.value = fallback;
-      Array.from(select.options).forEach((option) => {
-        option.hidden = !visibleTabs.some((tab) => tab.id === option.value);
-      });
-    }
-
-    toolbar.querySelectorAll('.doka-ribbon-group').forEach((section) => {
-      const tabList = (section.dataset.ribbonTabs || '').split(/\s+/);
-      section.classList.toggle('ribbon-visible', tabList.includes(fallback));
-    });
-  }
-
-  function getVisibleTabs() {
-    return tabs;
-  }
-
-  function getContext() {
+  function getCurrentQuestion() {
     const state = window.ConstructorState?.getState?.() || {};
-    const index = Number.isInteger(window.currentQuestionIndex) ? window.currentQuestionIndex : state.currentQuestionIndex;
-    const selected = index >= 0 && (window.questions?.[index] || state.questions?.[index]);
-    const elementType = selected?.elementType || selected?.layoutType || 'QUESTION';
-    const mode = selected?.gameMode || selected?.type;
-    return {
-      hasQuiz: Boolean(state.currentQuiz || window.currentQuiz),
-      hasQuestion: Boolean(selected),
-      elementType,
-      mode,
+    const index = Number.isInteger(state.currentQuestionIndex)
+      ? state.currentQuestionIndex
+      : (Number.isInteger(window.currentQuestionIndex) ? window.currentQuestionIndex : -1);
+    const list = Array.isArray(state.questions) ? state.questions : (Array.isArray(window.questions) ? window.questions : []);
+    return index >= 0 ? list[index] || null : null;
+  }
+
+  function inferSlideType(question, cfg) {
+    if (cfg.slideType) return cfg.slideType;
+    const mode = question?.gameMode || question?.type || 'EVERYONE_ANSWERS';
+    const elementType = question?.elementType || question?.layoutType || QUESTION;
+
+    if (elementType === 'INFO_SLIDE' || mode === 'INFO_SLIDE') return 'INFO_SLIDE';
+    if (mode === 'JEOPARDY_ROUND') return 'TRIVIA_BOARD';
+    if (mode === 'MILLIONAIRE_ROUND') return 'TRIVIA_LADDER';
+    if (['WAGER', 'MAJORITY_RULES', 'LAST_MAN_STANDING', 'ROUND_END', 'DEMOGRAPHIC', 'AUDIENCE_RESPONSE', 'SPEED_ROUND', 'BINGO', 'GAME_MODULE'].includes(mode)) {
+      return mode;
+    }
+    return QUESTION;
+  }
+
+  function inferQuestionMode(question, cfg) {
+    if (cfg.questionMode) return cfg.questionMode;
+    const mode = question?.gameMode || question?.type;
+    return mode === 'FASTEST_FINGER' ? 'FASTEST_FINGER' : 'EVERYONE_ANSWERS';
+  }
+
+  function inferInputMode(question, cfg) {
+    if (cfg.inputMode) return cfg.inputMode;
+    const mode = question?.gameMode || question?.type || '';
+    const map = {
+      IMAGE: 'IMAGE',
+      AUDIO: 'AUDIO',
+      VIDEO: 'VIDEO',
+      TRUE_FALSE: 'TRUE_FALSE',
+      TRUEFALSE: 'TRUE_FALSE',
+      ORDERED: 'ORDERED_ANSWERS',
+      MULTIPLE_CORRECT: 'MULTIPLE_CORRECT_MULTI_PICK',
     };
+    return map[mode] || 'MULTIPLE_CHOICE';
+  }
+
+  function ensureOption(selectId, value, label) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    if ([...select.options].some((opt) => opt.value === value)) return;
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    select.appendChild(option);
+  }
+
+  function appendSection(panel, id, title, html) {
+    if (document.getElementById(id)) return;
+    const section = document.createElement('section');
+    section.className = 'panel-section logic-section';
+    section.id = id;
+    section.innerHTML = `<h4>${title}</h4>${html}`;
+    panel.appendChild(section);
+  }
+
+  function ensureSlideTypePickerButton() {
+    const typeSection = document.getElementById('slideTypeSelect')?.closest('.panel-section');
+    const nativeSelect = document.getElementById('slideTypeSelect');
+    if (!typeSection || !nativeSelect) return;
+
+    nativeSelect.classList.add('slide-type-native-select');
+    nativeSelect.style.display = 'none';
+
+    if (!document.getElementById('slideTypePickerBtn')) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.id = 'slideTypePickerBtn';
+      button.className = 'btn btn-outline slide-type-picker-btn';
+      button.textContent = 'Выбрать тип слайда';
+      button.onclick = openSlideTypePicker;
+      typeSection.appendChild(button);
+    }
+
+    if (!document.getElementById('slideTypePickerCurrent')) {
+      const meta = document.createElement('div');
+      meta.id = 'slideTypePickerCurrent';
+      meta.className = 'slide-type-picker-current';
+      typeSection.appendChild(meta);
+    }
+  }
+
+  function ensureQuestionModeBlock() {
+    const section = document.getElementById('questionLogicSection');
+    if (!section) return;
+
+    const heading = section.querySelector('h4');
+    if (heading) heading.textContent = 'Свойства вопроса';
+
+    const legacyGroups = section.querySelectorAll('.grid-2 .form-group');
+    if (legacyGroups[0]) {
+      const label = legacyGroups[0].querySelector('.form-label');
+      if (label) label.textContent = 'Режим ответа';
+    }
+    if (legacyGroups[1]) legacyGroups[1].style.display = 'none';
+
+    const mediaTypeSelect = document.getElementById('mediaTypeSelect');
+    if (mediaTypeSelect) mediaTypeSelect.style.display = 'none';
+
+    if (document.getElementById('questionInputModeSelect')) return;
+    section.insertAdjacentHTML('afterbegin', `
+      <div id="questionModeBlock" class="mb-2">
+        <h4>Режим вопроса</h4>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Формат вопроса</label>
+            <select class="input" id="questionInputModeSelect" onchange="setQuestionInputMode(this.value)">
+              <option value="MULTIPLE_CHOICE">Множественный выбор</option>
+              <option value="OPEN_ENDED">Открытый ответ</option>
+              <option value="NUMERIC_INPUT">Числовой ввод</option>
+              <option value="TEXT_INPUT">Текстовый ввод</option>
+              <option value="INITIAL_LETTER_INPUT">Первая буква</option>
+              <option value="MULTIPLE_CORRECT_SINGLE_PICK">Несколько правильных (single pick)</option>
+              <option value="MULTIPLE_CORRECT_MULTI_PICK">Несколько правильных (multi pick)</option>
+              <option value="ORDERED_ANSWERS">Упорядочивание</option>
+              <option value="IMAGE">Вопрос с изображением</option>
+              <option value="AUDIO">Вопрос с аудио</option>
+              <option value="VIDEO">Вопрос с видео</option>
+              <option value="TRUE_FALSE">Правда / Ложь</option>
+            </select>
+          </div>
+          <div></div>
+        </div>
+        <div class="grid-2 mt-2">
+          <select class="input" id="multipleCorrectModeSelect" onchange="syncPreviewFromProperties()">
+            <option value="none">Несколько правильных: нет</option>
+            <option value="single_pick">Одна попытка</option>
+            <option value="multi_pick">Множественный выбор</option>
+            <option value="exact_match">Точное совпадение</option>
+          </select>
+          <select class="input" id="orderedModeSelect" onchange="syncPreviewFromProperties()">
+            <option value="exact">Упорядочивание: точное совпадение</option>
+            <option value="partial">Упорядочивание: частичное совпадение</option>
+          </select>
+        </div>
+      </div>
+    `);
+  }
+
+  function ensureAdditionalSections(panel) {
+    appendSection(panel, 'judgeSection', 'Судейство', `
+      <div class="grid-2">
+        <select class="input" id="judgeModeSelect" onchange="syncPreviewFromProperties()">
+          <option value="auto">Автоматически</option>
+          <option value="manual">Вручную ведущим</option>
+        </select>
+        <select class="input" id="textJudgeMode" onchange="syncPreviewFromProperties()">
+          <option value="exact">Текст: точное совпадение</option>
+          <option value="approx">Текст: приблизительное совпадение</option>
+        </select>
+      </div>
+      <div class="grid-2 mt-2">
+        <input class="input" type="number" id="answerTolerance" value="0" min="0" placeholder="Допуск" oninput="syncPreviewFromProperties()">
+        <select class="input" id="numericJudgeMode" onchange="syncPreviewFromProperties()">
+          <option value="exact">Числа: точное совпадение</option>
+          <option value="nearest">Числа: nearest wins</option>
+        </select>
+      </div>
+    `);
+
+    appendSection(panel, 'correctAnswersSection', 'Правильные ответы', `
+      <div class="grid-2">
+        <input class="input" id="correctAnswerValue" placeholder="Значение правильного ответа" oninput="syncPreviewFromProperties()">
+        <input class="input" id="acceptedAnswersRaw" placeholder="Допустимые ответы через ;" oninput="syncPreviewFromProperties()">
+      </div>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.ROUND_END.id, SPECIAL_SECTIONS.ROUND_END.title, `
+      <div class="content-stack gap-1">
+        <label class="form-checkbox"><input type="checkbox" id="roundEndShowRating" onchange="syncPreviewFromProperties()"> Показать промежуточный рейтинг</label>
+        <label class="form-checkbox"><input type="checkbox" id="roundEndExcludeLoser" onchange="syncPreviewFromProperties()"> Исключить проигравшего</label>
+        <label class="form-checkbox"><input type="checkbox" id="roundEndHostSelectLosers" onchange="syncPreviewFromProperties()"> Ведущий выбирает проигравших</label>
+        <label class="form-checkbox"><input type="checkbox" id="roundEndResetScores" onchange="syncPreviewFromProperties()"> Сбросить очки после раунда</label>
+      </div>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.DEMOGRAPHIC.id, SPECIAL_SECTIONS.DEMOGRAPHIC.title, `
+      <textarea class="input" id="demographicDescription" rows="3" placeholder="Описание группы" oninput="syncPreviewFromProperties()"></textarea>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.LAST_MAN_STANDING.id, SPECIAL_SECTIONS.LAST_MAN_STANDING.title, `
+      <div class="content-stack gap-1">
+        <label class="form-checkbox"><input type="checkbox" id="lmsEliminateOnWrong" checked onchange="syncPreviewFromProperties()"> Исключать игрока при ошибке</label>
+        <label class="form-checkbox"><input type="checkbox" id="lmsNoEliminateIfAllWrong" checked onchange="syncPreviewFromProperties()"> Если все ошиблись, никого не исключать</label>
+      </div>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.AUDIENCE_RESPONSE.id, SPECIAL_SECTIONS.AUDIENCE_RESPONSE.title, `
+      <div class="grid-2">
+        <select class="input" id="audienceGraphMode" onchange="syncPreviewFromProperties()">
+          <option value="realtime">График в реальном времени</option>
+          <option value="final">График после завершения</option>
+        </select>
+        <select class="input" id="audienceChartType" onchange="syncPreviewFromProperties()">
+          <option value="bar">Столбчатая диаграмма</option>
+          <option value="pie">Круговая диаграмма</option>
+        </select>
+      </div>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.WAGER.id, SPECIAL_SECTIONS.WAGER.title, `
+      <div class="grid-2">
+        <select class="input" id="wagerMode" onchange="syncPreviewFromProperties()">
+          <option value="percent">Ставка в процентах</option>
+          <option value="absolute">Фиксированная сумма</option>
+        </select>
+        <input class="input" type="number" id="wagerMin" value="0" min="0" placeholder="Минимальная ставка" oninput="syncPreviewFromProperties()">
+      </div>
+      <div class="grid-2 mt-2">
+        <input class="input" type="number" id="wagerMax" value="100" min="0" placeholder="Максимальная ставка" oninput="syncPreviewFromProperties()">
+        <input class="input" id="wagerNextPrompt" placeholder="Текст перед следующим вопросом" oninput="syncPreviewFromProperties()">
+      </div>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.MAJORITY_RULES.id, SPECIAL_SECTIONS.MAJORITY_RULES.title, `
+      <div class="grid-2">
+        <input class="input" type="number" id="majorityPoints" value="100" min="0" placeholder="Очки за большинство" oninput="syncPreviewFromProperties()">
+        <select class="input" id="majorityTieMode" onchange="syncPreviewFromProperties()">
+          <option value="single">При равенстве: один вариант</option>
+          <option value="multiple">При равенстве: несколько вариантов</option>
+        </select>
+      </div>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.TRIVIA_BOARD.id, SPECIAL_SECTIONS.TRIVIA_BOARD.title, `
+      <div class="grid-2">
+        <select class="input" id="boardPickMode" onchange="syncPreviewFromProperties()">
+          <option value="manual">Выбор вручную</option>
+          <option value="random">Случайный выбор</option>
+        </select>
+        <input class="input" type="number" id="boardMaxQuestions" min="1" value="20" placeholder="Максимум вопросов" oninput="syncPreviewFromProperties()">
+      </div>
+      <div class="content-stack gap-1 mt-2">
+        <label class="form-checkbox"><input type="checkbox" id="boardHideEmpty" onchange="syncPreviewFromProperties()"> Скрывать пустые ячейки</label>
+        <label class="form-checkbox"><input type="checkbox" id="boardTopicsOnly" onchange="syncPreviewFromProperties()"> Показывать только темы</label>
+        <label class="form-checkbox"><input type="checkbox" id="boardRandomFromCell" onchange="syncPreviewFromProperties()"> Случайный вопрос из ячейки</label>
+      </div>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.TRIVIA_LADDER.id, SPECIAL_SECTIONS.TRIVIA_LADDER.title, `
+      <div class="grid-2">
+        <select class="input" id="ladderFailAction" onchange="syncPreviewFromProperties()">
+          <option value="stay">При ошибке: остаться на месте</option>
+          <option value="step_down">При ошибке: шаг вниз</option>
+          <option value="safe_haven">При ошибке: к несгораемой сумме</option>
+          <option value="start">При ошибке: вернуться в начало</option>
+        </select>
+        <select class="input" id="ladderPosition" onchange="syncPreviewFromProperties()">
+          <option value="right">Положение: справа</option>
+          <option value="center">Положение: по центру</option>
+          <option value="full">Положение: на весь экран</option>
+        </select>
+      </div>
+      <label class="form-checkbox mt-2"><input type="checkbox" id="ladderAlwaysVisible" onchange="syncPreviewFromProperties()"> Всегда показывать лестницу</label>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.TRIVIA_FEUD.id, SPECIAL_SECTIONS.TRIVIA_FEUD.title, `
+      <div class="grid-2">
+        <select class="input" id="feudMode" onchange="syncPreviewFromProperties()">
+          <option value="manual">Режим игры: ручной</option>
+          <option value="interactive">Режим игры: интерактивный</option>
+          <option value="multiplayer">Режим игры: многопользовательский</option>
+        </select>
+        <select class="input" id="feudRevealMode" onchange="syncPreviewFromProperties()">
+          <option value="manual">Раскрытие: вручную</option>
+          <option value="auto">Раскрытие: автоматически</option>
+        </select>
+      </div>
+      <div class="grid-2 mt-2">
+        <input class="input" type="number" id="feudTeamMistakesLimit" min="0" value="3" placeholder="Лимит ошибок команды" oninput="syncPreviewFromProperties()">
+        <input class="input" type="number" id="feudPenaltyPoints" min="0" value="0" placeholder="Штрафные очки" oninput="syncPreviewFromProperties()">
+      </div>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.SPEED_ROUND.id, SPECIAL_SECTIONS.SPEED_ROUND.title, `
+      <div class="grid-2">
+        <input class="input" type="number" id="speedRoundDuration" min="10" value="60" placeholder="Длительность (сек)" oninput="syncPreviewFromProperties()">
+        <select class="input" id="speedRoundMode" onchange="syncPreviewFromProperties()">
+          <option value="host">Ведущий управляет вручную</option>
+          <option value="buzzer">Режим buzzer-ответов</option>
+        </select>
+      </div>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.BINGO.id, SPECIAL_SECTIONS.BINGO.title, `
+      <div class="grid-2">
+        <select class="input" id="bingoType" onchange="syncPreviewFromProperties()">
+          <option value="standard">Стандартный бинго</option>
+          <option value="emoji">Emoji bingo</option>
+          <option value="trivia">Trivia bingo</option>
+          <option value="music">Music bingo</option>
+        </select>
+        <input class="input" type="number" id="bingoFalseLimit" min="0" value="0" placeholder="Лимит ложных bingo" oninput="syncPreviewFromProperties()">
+      </div>
+      <div class="grid-2 mt-2">
+        <input class="input" type="number" id="bingoPatternPoints" min="0" value="100" placeholder="Очки за шаблон" oninput="syncPreviewFromProperties()">
+        <input class="input" type="number" id="bingoFalsePenalty" min="0" value="0" placeholder="Штраф за ложный bingo" oninput="syncPreviewFromProperties()">
+      </div>
+    `);
+
+    appendSection(panel, SPECIAL_SECTIONS.GAME_MODULE.id, SPECIAL_SECTIONS.GAME_MODULE.title, `
+      <div class="grid-2">
+        <input class="input" id="gameModuleType" placeholder="Тип модуля" oninput="syncPreviewFromProperties()">
+        <input class="input" id="gameModuleTitle" placeholder="Название модуля" oninput="syncPreviewFromProperties()">
+      </div>
+      <div class="grid-2 mt-2">
+        <input class="input" id="gameModuleLaunchBehavior" placeholder="Поведение запуска" oninput="syncPreviewFromProperties()">
+        <input class="input" id="gameModuleConfigJson" placeholder="configJson модуля" oninput="syncPreviewFromProperties()">
+      </div>
+    `);
+  }
+
+  function ensurePickerModal() {
+    if (document.getElementById('slideTypePickerModal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'slideTypePickerModal';
+    modal.className = 'slide-type-modal';
+    modal.innerHTML = `
+      <div class="slide-type-modal-backdrop" onclick="closeSlideTypePicker()"></div>
+      <div class="slide-type-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="slideTypePickerTitle">
+        <div class="slide-type-modal-header">
+          <h3 id="slideTypePickerTitle">Выберите тип слайда</h3>
+          <button type="button" class="btn btn-outline btn-sm" onclick="closeSlideTypePicker()">Закрыть</button>
+        </div>
+        <div class="slide-type-card-grid" id="slideTypeCardGrid"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  function updatePickerButtonLabel(slideType) {
+    const current = document.getElementById('slideTypePickerCurrent');
+    if (!current) return;
+    const meta = SLIDE_TYPES.find((type) => type.id === slideType);
+    current.textContent = meta ? `Выбранный тип: ${meta.title}` : 'Тип не выбран';
+  }
+
+  function renderSlideTypeCards(activeType) {
+    const grid = document.getElementById('slideTypeCardGrid');
+    if (!grid) return;
+
+    grid.innerHTML = SLIDE_TYPES.map((type) => `
+      <button type="button" class="slide-type-card ${type.id === activeType ? 'active' : ''}" data-slide-type="${type.id}">
+        <span class="slide-type-card-icon">${type.icon}</span>
+        <span class="slide-type-card-title">${type.title}</span>
+        <span class="slide-type-card-desc">${type.desc}</span>
+      </button>
+    `).join('');
+
+    grid.querySelectorAll('.slide-type-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const type = card.dataset.slideType;
+        if (!type) return;
+        window.setSlideType(type);
+        closeSlideTypePicker();
+      });
+    });
+  }
+
+  function openSlideTypePicker() {
+    const currentQuestion = getCurrentQuestion();
+    if (!currentQuestion) return;
+    ensurePickerModal();
+    renderSlideTypeCards(val('slideTypeSelect', QUESTION));
+    document.getElementById('slideTypePickerModal')?.classList.add('is-open');
+  }
+
+  function closeSlideTypePicker() {
+    document.getElementById('slideTypePickerModal')?.classList.remove('is-open');
+  }
+
+  function applyContext(slideType, inputMode) {
+    const isQuestion = slideType === QUESTION;
+
+    show('questionModeBlock', isQuestion);
+    show('questionLogicSection', isQuestion);
+    show('answersSection', isQuestion && !['OPEN_ENDED', 'NUMERIC_INPUT', 'TEXT_INPUT', 'INITIAL_LETTER_INPUT', 'TRUE_FALSE'].includes(inputMode));
+    show('trueFalseSection', isQuestion && inputMode === 'TRUE_FALSE');
+    show('timingSection', isQuestion || ['INFO_SLIDE', 'LAST_MAN_STANDING', 'MAJORITY_RULES'].includes(slideType));
+    show('scoringSection', isQuestion || ['LAST_MAN_STANDING', 'MAJORITY_RULES'].includes(slideType));
+    show('advancedSection', isQuestion);
+    show('judgeSection', isQuestion);
+    show('correctAnswersSection', isQuestion);
+    show('mediaCommonSection', isQuestion || slideType === 'INFO_SLIDE');
+    show('infoLogicSection', slideType === 'INFO_SLIDE');
+
+    Object.values(SPECIAL_SECTIONS).forEach((section) => show(section.id, false));
+    if (SPECIAL_SECTIONS[slideType]) {
+      show(SPECIAL_SECTIONS[slideType].id, true);
+    }
+  }
+
+  function updateCompatFields() {
+    const slideType = val('slideTypeSelect', QUESTION);
+    const answerMode = val('answerModeSelect', 'EVERYONE_ANSWERS');
+    const inputMode = val('questionInputModeSelect', 'MULTIPLE_CHOICE');
+
+    const specialLegacy = {
+      INFO_SLIDE: 'INFO_SLIDE',
+      LAST_MAN_STANDING: 'LAST_MAN_STANDING',
+      WAGER: 'WAGER',
+      MAJORITY_RULES: 'MAJORITY_RULES',
+      TRIVIA_BOARD: 'JEOPARDY_ROUND',
+      TRIVIA_LADDER: 'MILLIONAIRE_ROUND',
+      TRIVIA_FEUD: 'MAJORITY_RULES',
+      ROUND_END: 'ROUND_END',
+      DEMOGRAPHIC: 'DEMOGRAPHIC',
+      AUDIENCE_RESPONSE: 'AUDIENCE_RESPONSE',
+      SPEED_ROUND: 'SPEED_ROUND',
+      BINGO: 'BINGO',
+      GAME_MODULE: 'GAME_MODULE',
+    };
+    const questionLegacy = {
+      IMAGE: 'IMAGE',
+      AUDIO: 'AUDIO',
+      VIDEO: 'VIDEO',
+      TRUE_FALSE: 'TRUE_FALSE',
+      ORDERED_ANSWERS: 'ORDERED',
+      MULTIPLE_CORRECT_SINGLE_PICK: 'MULTIPLE_CORRECT',
+      MULTIPLE_CORRECT_MULTI_PICK: 'MULTIPLE_CORRECT',
+      OPEN_ENDED: 'TEXT',
+      NUMERIC_INPUT: 'TEXT',
+      TEXT_INPUT: 'TEXT',
+      INITIAL_LETTER_INPUT: 'TEXT',
+      MULTIPLE_CHOICE: answerMode === 'FASTEST_FINGER' ? 'FASTEST_FINGER' : 'EVERYONE_ANSWERS',
+    };
+
+    const legacy = slideType === QUESTION
+      ? (questionLegacy[inputMode] || 'EVERYONE_ANSWERS')
+      : (specialLegacy[slideType] || 'EVERYONE_ANSWERS');
+
+    set('questionTypeSelect', legacy, legacy);
+    set('mediaTypeSelect', ['IMAGE', 'AUDIO', 'VIDEO', 'TRUE_FALSE'].includes(inputMode) ? inputMode : 'TEXT', 'TEXT');
+  }
+
+  function syncRightPanel(question) {
+    const cfg = parseConfig(question);
+    const logic = cfg.logic || {};
+    const slideType = inferSlideType(question, cfg);
+    const questionMode = inferQuestionMode(question, cfg);
+    const inputMode = inferInputMode(question, cfg);
+
+    set('slideTypeSelect', slideType, QUESTION);
+    set('answerModeSelect', questionMode, 'EVERYONE_ANSWERS');
+    set('questionInputModeSelect', inputMode, 'MULTIPLE_CHOICE');
+    set('multipleCorrectModeSelect', cfg.multipleCorrectMode || logic.multipleCorrectMode, 'none');
+    set('orderedModeSelect', cfg.orderedMode || logic.orderedMode, 'exact');
+    set('serviceElementTitle', cfg.serviceElementTitle, '');
+    set('categoryPreset', cfg.categoryPreset, '');
+    set('transitionMode', cfg.transitionMode, 'default');
+    set('showAnswerPolicy', cfg.showAnswerPolicy, 'global');
+    set('judgeModeSelect', logic.judgeMode, 'auto');
+    set('textJudgeMode', logic.textJudgeMode, 'exact');
+    set('answerTolerance', logic.answerTolerance, 0);
+    set('numericJudgeMode', logic.numericJudgeMode, 'exact');
+    set('correctAnswerValue', logic.correctAnswerValue, '');
+    set('acceptedAnswersRaw', logic.acceptedAnswersRaw, '');
+
+    updateCompatFields();
+    applyContext(slideType, inputMode);
+    updatePickerButtonLabel(slideType);
+  }
+
+  function syncAppearance(question) {
+    if (!question) return;
+    const appearance = parseConfig(question).appearance || {};
+    set('answerChipColor', appearance.answerChipColor, '#6a4fff');
+    set('titleColor', appearance.titleColor, '#111827');
+    set('answerColor', appearance.answerColor, '#111827');
+    set('questionFont', appearance.questionFont, "'Inter', sans-serif");
+    set('answerFont', appearance.answerFont, "'Inter', sans-serif");
+    set('titleSize', appearance.titleSize, 48);
+    set('answerSize', appearance.answerSize, 18);
+    set('answerLayout', appearance.answerLayout, 'grid-2');
+    set('questionTemplate', appearance.template, 'classic');
+    set('textAlign', appearance.textAlign, 'left');
+    set('backgroundColor', question.backgroundColor, '#f6f8fb');
+    set('backgroundImageUrl', question.backgroundImageUrl, '');
+    set('backgroundGradient', appearance.backgroundGradient, '');
   }
 
   function refresh() {
-    const toolbar = document.querySelector('.constructor-settings-panel');
-    if (!toolbar?.classList.contains('doka-ribbon')) return;
-    setActiveTab(toolbar.dataset.activeRibbonTab || localStorage.getItem(STORAGE_KEY) || 'quiz');
-    const context = getContext();
-    const allButtons = toolbar.querySelectorAll('.doka-ribbon-button');
-    allButtons.forEach((node) => {
-      const allowNoQuiz = node.dataset.allowNoQuiz === 'true';
-      if (!context.hasQuiz && !allowNoQuiz) {
-        node.disabled = true;
-        node.classList.add('is-disabled');
-      }
+    const question = getCurrentQuestion();
+    const hasQuiz = Boolean(window.ConstructorState?.getState?.().currentQuiz || window.currentQuiz);
+    const hasSelection = Boolean(question);
+
+    document.querySelectorAll('[data-requires-quiz="true"]').forEach((node) => {
+      node.disabled = !hasQuiz;
+      node.classList.toggle('is-disabled', !hasQuiz);
     });
-    toolbar.querySelectorAll('[data-requires-question="true"]').forEach((node) => {
-      node.disabled = !context.hasQuestion;
-      node.classList.toggle('is-disabled', !context.hasQuestion);
-    });
-    toolbar.querySelectorAll('[data-requires-quiz="true"]').forEach((node) => {
-      node.disabled = !context.hasQuiz;
-      node.classList.toggle('is-disabled', !context.hasQuiz);
+    document.querySelectorAll('[data-requires-question="true"]').forEach((node) => {
+      node.disabled = !hasSelection;
+      node.classList.toggle('is-disabled', !hasSelection);
     });
 
-    if (!context.hasQuiz) {
-      toolbar.querySelectorAll('.doka-ribbon-button').forEach((node) => {
-        if (node.dataset.allowNoQuiz !== 'true') {
-          node.disabled = true;
-          node.classList.add('is-disabled');
-        }
+    syncAppearance(question);
+    syncRightPanel(question);
+
+    if (!hasSelection) {
+      [
+        'questionLogicSection',
+        'timingSection',
+        'scoringSection',
+        'advancedSection',
+        'judgeSection',
+        'correctAnswersSection',
+        'mediaCommonSection',
+        'infoLogicSection',
+        ...Object.values(SPECIAL_SECTIONS).map((entry) => entry.id),
+      ].forEach((id) => show(id, false));
+    }
+
+    const panel = document.getElementById('logicPanel');
+    if (panel) {
+      panel.querySelectorAll('input,select,textarea,button').forEach((node) => {
+        if (node.id === 'slideTypeSelect') return;
+        node.disabled = !hasSelection;
       });
     }
+  }
 
-    toolbar.querySelectorAll('[data-mode-group]')?.forEach((node) => {
-      const group = node.dataset.modeGroup;
-      let visible = true;
-      if (!context.hasQuestion) {
-        visible = false;
-      } else if (context.elementType === 'INFO_SLIDE' || context.elementType === 'ROUND_INTRO') {
-        visible = false;
-      } else if (context.elementType === 'GAME_ROUND') {
-        visible = group === 'round';
-      }
-      node.hidden = !visible;
-    });
-
-    toolbar.querySelectorAll('.doka-command-group').forEach((group) => {
-      if (group.dataset.ribbonTabs !== 'mode' && group.dataset.ribbonTabs !== 'media' && group.dataset.ribbonTabs !== 'host') return;
-      group.classList.toggle('is-disabled', !context.hasQuestion);
-    });
-
-    togglePanelSections(context);
-
-    toolbar.querySelectorAll('.doka-ribbon-button').forEach((node) => {
-      node.classList.toggle('is-active', context.mode && node.dataset.handlerId && node.dataset.activeMode === context.mode);
-    });
-
-    highlightModeButton(context.mode);
-    const label = document.getElementById('ribbonContextLabel');
-    if (label) {
-      label.textContent = context.hasQuestion
-        ? `Выбран: ${getElementLabel(context.elementType)} · ${getModeLabel(context.mode)}`
-        : 'Панель конструктора';
+  function propagateChange() {
+    updateCompatFields();
+    applyContext(val('slideTypeSelect', QUESTION), val('questionInputModeSelect', 'MULTIPLE_CHOICE'));
+    updatePickerButtonLabel(val('slideTypeSelect', QUESTION));
+    if (typeof window.syncPreviewFromProperties === 'function') {
+      window.syncPreviewFromProperties();
     }
   }
 
-  function togglePanelSections(context) {
-    const sections = {
-      content: document.getElementById('contentSection'),
-      media: document.getElementById('mediaSection'),
-      appearance: document.getElementById('appearanceSection'),
-      templates: document.getElementById('templatesSection'),
-      scoring: document.getElementById('scoringSection'),
-      timing: document.getElementById('timingSection'),
-      hostNotes: document.getElementById('hostNotesSection'),
-      advanced: document.getElementById('advancedSection'),
-    };
+  function init() {
+    const toolbar = document.getElementById('constructorToolbar');
+    if (!toolbar || toolbar.dataset.ready === 'true') return;
+    toolbar.dataset.ready = 'true';
 
-    Object.values(sections).forEach((section) => {
-      if (!section) return;
-      section.classList.toggle('is-disabled', !context.hasQuestion);
-      section.style.opacity = context.hasQuestion ? '1' : '0.5';
-    });
+    const panel = document.getElementById('logicPanel');
+    if (!panel || panel.dataset.modelReady === 'true') return;
+    panel.dataset.modelReady = 'true';
 
-    if (!context.hasQuestion) return;
-
-    const isInfo = context.elementType === 'INFO_SLIDE';
-    const isRoundIntro = context.elementType === 'ROUND_INTRO';
-    const isGameRound = context.elementType === 'GAME_ROUND';
-
-    if (sections.scoring) sections.scoring.style.display = isInfo ? 'none' : 'block';
-    if (sections.timing) sections.timing.style.display = isInfo ? 'none' : 'block';
-    if (sections.advanced) sections.advanced.style.display = isInfo ? 'none' : 'block';
-    if (sections.hostNotes) sections.hostNotes.style.display = 'block';
-    if (sections.content) sections.content.style.display = 'block';
-    if (sections.media) sections.media.style.display = 'block';
-    if (sections.appearance) sections.appearance.style.display = isGameRound ? 'none' : 'block';
-    if (sections.templates) sections.templates.style.display = isGameRound ? 'none' : 'block';
-  }
-
-  function runHandler(id) {
-    handlers.get(id)?.();
+    SLIDE_TYPES.forEach((type) => ensureOption('slideTypeSelect', type.id, type.title));
+    ensureSlideTypePickerButton();
+    ensureQuestionModeBlock();
+    ensureAdditionalSections(panel);
+    ensurePickerModal();
     refresh();
   }
 
-  function runToggle(key) {
-    const next = localStorage.getItem(`dokastudio.ribbon.${key}`) !== 'true';
-    localStorage.setItem(`dokastudio.ribbon.${key}`, String(next));
-    document.querySelectorAll(`[data-toggle-key="${key}"]`).forEach((node) => node.classList.toggle('active', next));
-    const item = Object.values(commands).flatMap((list) => list.flatMap((entry) => entry.items)).find((entry) => entry.key === key);
-    item?.handler?.(key, next);
-  }
+  window.setSlideType = (value) => {
+    set('slideTypeSelect', value, QUESTION);
+    propagateChange();
+  };
+  window.setAnswerMode = (value) => {
+    set('answerModeSelect', value, 'EVERYONE_ANSWERS');
+    propagateChange();
+  };
+  window.setQuestionInputMode = (value) => {
+    set('questionInputModeSelect', value, 'MULTIPLE_CHOICE');
+    propagateChange();
+  };
+  window.setMediaType = (value) => window.setQuestionInputMode(value);
+  window.openSlideTypePicker = openSlideTypePicker;
+  window.closeSlideTypePicker = closeSlideTypePicker;
+  window.updateInfoFields = () => {
+    const title = val('infoTitleInput', '');
+    const text = val('infoTextInput', '');
+    if (document.getElementById('questionSubtitle')) document.getElementById('questionSubtitle').value = title;
+    if (document.getElementById('questionText')) document.getElementById('questionText').value = text;
+    propagateChange();
+  };
 
-  function toggleMobile() {
-    document.querySelector('.constructor-settings-panel')?.classList.toggle('mobile-open');
-  }
-
-  function call(name, ...args) {
-    if (typeof window[name] === 'function') return window[name](...args);
-    toast(`${name} is not available yet.`);
-  }
-
-  function exec(command) {
-    try {
-      document.execCommand(command);
-    } catch (error) {
-      toast(`${command} is not available in this browser.`);
-    }
-  }
-
-  function addTypedQuestion(type) {
-    const context = getContext();
-    if (!context.hasQuiz) {
-      toast('Сначала создайте или откройте викторину.');
-      return;
-    }
-    call('addQuizElement', 'QUESTION');
-    setTimeout(() => call('setQuestionType', type), 0);
-  }
-
-  function openMedia(accept) {
-    const input = document.getElementById('mediaFile');
-    if (input) input.accept = accept;
-    input?.click();
-  }
-
-  function duplicateCurrent() {
-    const state = window.ConstructorState?.getState?.() || {};
-    const index = state.currentQuestionIndex;
-    const source = state.questions?.[index];
-    if (!source) return toast('Select a slide first.');
-    const copy = JSON.parse(JSON.stringify(source));
-    delete copy.id;
-    copy.tempId = `tmp_${Date.now()}`;
-    copy.text = `${copy.text || 'Question'} copy`;
-    window.questions.splice(index + 1, 0, copy);
-    window.ConstructorState.setQuestions(window.questions);
-    window.renderQuestionsList?.();
-    window.editQuestion?.(index + 1);
-  }
-
-  function resetSelectedSlide() {
-    const fields = ['backgroundImageUrl', 'questionSubtitle', 'questionNotes'];
-    fields.forEach((id) => {
-      const input = document.getElementById(id);
-      if (input) input.value = '';
-    });
-    const color = document.getElementById('backgroundColor');
-    if (color) color.value = '#f6f8fb';
-    window.syncPreviewFromProperties?.();
-  }
-
-  function completeAnswers() {
-    const state = window.ConstructorState?.getState?.() || {};
-    const question = state.questions?.[state.currentQuestionIndex];
-    if (!question) return;
-    while ((question.answers || []).length < 4) window.addAnswer?.();
-  }
-
-  function clearMedia() {
-    const state = window.ConstructorState?.getState?.() || {};
-    const index = state.currentQuestionIndex;
-    const question = state.questions?.[index];
-    if (!question) return;
-    question.imageUrl = null;
-    question.videoUrl = null;
-    question.audioUrl = null;
-    state.questions[index] = question;
-    window.questions = state.questions;
-    window.ConstructorState.setQuestions(state.questions);
-    window.QuestionEditorComponent?.renderStudioPreview(question);
-  }
-
-  function setPanelVisibility(key, visible) {
-    const map = {
-      showThumbs: '.constructor-outline',
-      showProps: '.constructor-settings-panel',
-    };
-    const node = document.querySelector(map[key]);
-    if (node) node.classList.toggle('ribbon-hidden', !visible);
-  }
-
-  let canvasZoom = 1;
-  function zoomCanvas(delta) {
-    setCanvasZoom(Math.max(0.5, Math.min(1.5, canvasZoom + delta)));
-  }
-
-  function setCanvasZoom(value) {
-    canvasZoom = value;
-    document.documentElement.style.setProperty('--studio-canvas-zoom', String(value));
-  }
-
-  function setStudioViewMode(mode) {
-    document.body.dataset.studioView = mode;
-  }
-
-  function setPreviewFocus(key, isEnabled) {
-    const focus = isEnabled ? 'canvas' : 'slides';
-    setStudioViewMode(focus);
-  }
-
-  function setSelectedMode(mode) {
-    call('setQuestionType', mode);
-    highlightModeButton(mode);
-  }
-
-  function highlightModeButton(mode) {
-    const toolbar = document.querySelector('.constructor-settings-panel');
-    if (!toolbar) return;
-    toolbar.querySelectorAll('[data-mode]')?.forEach((node) => {
-      node.classList.toggle('is-active', node.dataset.mode === mode);
-    });
-  }
-
-  function getModeLabel(mode) {
-    const labels = {
-      EVERYONE_ANSWERS: 'Все отвечают',
-      FASTEST_FINGER: 'Кто быстрее',
-      MULTIPLE_CORRECT: 'Несколько правильных',
-      ORDERED: 'Верный порядок',
-      TRUE_FALSE: 'Правда / Ложь',
-      TEXT: 'Текстовый вопрос',
-      IMAGE: 'Вопрос с изображением',
-      AUDIO: 'Вопрос с аудио',
-      VIDEO: 'Вопрос с видео',
-      DECREASING_POINTS: 'Убывающие очки',
-      WAGER: 'Ставка',
-      MAJORITY_RULES: 'Большинство / Семейная',
-      LAST_MAN_STANDING: 'Последний выживший',
-      JEOPARDY_ROUND: 'Раунд «Своя игра»',
-      MILLIONAIRE_ROUND: 'Раунд «Миллионер»',
-      INFO_SLIDE: 'Инфо-слайд',
-      ROUND_INTRO: 'Вступление раунда',
-    };
-    return labels[mode] || 'Элемент';
-  }
-
-  function getElementLabel(type) {
-    const labels = {
-      QUESTION: 'Вопрос',
-      INFO_SLIDE: 'Инфо-слайд',
-      ROUND_INTRO: 'Вступление раунда',
-      GAME_ROUND: 'Игровой раунд',
-    };
-    return labels[type] || 'Элемент';
-  }
-
-  function bindShortcuts() {
-    if (window.__dokaRibbonShortcuts) return;
-    window.__dokaRibbonShortcuts = true;
-    document.addEventListener('keydown', (event) => {
-      const key = event.key.toLowerCase();
-      if (event.ctrlKey && key === 's') {
-        event.preventDefault();
-        call('saveCurrentQuestion');
-      }
-      if (event.ctrlKey && key === 'z') {
-        event.preventDefault();
-        document.execCommand('undo');
-      }
-      if (event.ctrlKey && key === 'y') {
-        event.preventDefault();
-        document.execCommand('redo');
-      }
-      if (event.key === 'F5') {
-        event.preventDefault();
-        call('previewQuiz');
-      }
-    });
-  }
-
-  function toast(message) {
-    if (typeof window.showToast === 'function') window.showToast(message, 'info');
-    else console.info(message);
-  }
-
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  function focusPanelSection(sectionKey) {
-    const section = document.querySelector(`[data-panel-section="${sectionKey}"]`);
-    if (!section) return;
-    const toolbar = document.querySelector('.constructor-settings-panel');
-    if (toolbar) toolbar.classList.add('ribbon-focus-mode');
-    section.classList.add('is-open', 'is-focused');
-    section.querySelector('h3')?.setAttribute('aria-expanded', 'true');
-    section.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    setTimeout(() => {
-      section.classList.remove('is-open');
-      section.classList.remove('is-focused');
-      if (toolbar) toolbar.classList.remove('ribbon-focus-mode');
-    }, 2200);
-  }
-
-  function saveAllQuizChanges() {
-    const state = window.ConstructorState?.getState?.() || {};
-    const activeIndex = state.currentQuestionIndex;
-    if (!state.currentQuiz) {
-      toast('Сначала создайте или откройте викторину.');
-      return;
-    }
-    if (activeIndex >= 0 && window.questions?.[activeIndex]) {
-      call('saveCurrentQuestion');
-      return;
-    }
-    toast('Нет активного элемента для сохранения.');
-  }
-
-  function injectModeDataAttributes() {
-    const mapping = new Map();
-    Object.values(commands).forEach((groupList) => {
-      groupList.forEach((groupItem) => {
-        groupItem.items.forEach((item) => {
-          if (item.kind !== 'action') return;
-          if (!item.label || !item.handler) return;
-          if (item.handler.name === 'setSelectedMode') return;
-        });
-      });
-    });
-  }
-
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeSlideTypePicker();
+  });
   document.addEventListener('DOMContentLoaded', init);
 
-  window.DokaRibbon = {
-    init,
-    refresh,
-    setActiveTab,
-    runHandler,
-    runToggle,
-    toggleMobile,
-  };
+  window.DokaRibbon = { init, refresh };
 })();

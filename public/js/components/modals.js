@@ -1,118 +1,114 @@
-// Modals.js — Все модальные окна конструктора
+﻿// Modals.js вЂ” Р’СЃРµ РјРѕРґР°Р»СЊРЅС‹Рµ РѕРєРЅР° РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂР°
 const Modals = {
     render(containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
         
         container.innerHTML = `
-            <!-- Модалка создания квиза -->
+            <!-- РњРѕРґР°Р»РєР° СЃРѕР·РґР°РЅРёСЏ РєРІРёР·Р° -->
             <div class="preview-modal" id="createQuizModal">
                 <div class="preview-content">
-                    <h2>📋 Создание нового квиза</h2>
+                    <h2>рџ“‹ РЎРѕР·РґР°РЅРёРµ РЅРѕРІРѕРіРѕ РєРІРёР·Р°</h2>
                     <div class="form-group">
-                        <label class="form-label">Название</label>
-                        <input type="text" class="input" id="newQuizTitle" placeholder="Например: Киновикторина">
+                        <label class="form-label">РќР°Р·РІР°РЅРёРµ</label>
+                        <input type="text" class="input" id="newQuizTitle" placeholder="РќР°РїСЂРёРјРµСЂ: РљРёРЅРѕРІРёРєС‚РѕСЂРёРЅР°">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Описание</label>
-                        <textarea class="input" id="newQuizDesc" rows="3" placeholder="О чём этот квиз?"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Обложка</label>
-                        <input type="url" class="input" id="newQuizThumbnailUrl" placeholder="https://... или /uploads/...">
+                        <label class="form-label">РћРїРёСЃР°РЅРёРµ</label>
+                        <textarea class="input" id="newQuizDesc" rows="3" placeholder="Рћ С‡С‘Рј СЌС‚РѕС‚ РєРІРёР·?"></textarea>
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-primary" onclick="createQuiz()">Создать</button>
-                        <button class="btn btn-outline" onclick="closeModal('createQuizModal')">Отмена</button>
+                        <button class="btn btn-primary" onclick="createQuiz()">РЎРѕР·РґР°С‚СЊ</button>
+                        <button class="btn btn-outline" onclick="closeModal('createQuizModal')">РћС‚РјРµРЅР°</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Модалка списка квизов -->
+            <!-- РњРѕРґР°Р»РєР° СЃРїРёСЃРєР° РєРІРёР·РѕРІ -->
             <div class="preview-modal" id="quizzesListModal">
                 <div class="preview-content" style="max-width: 760px;">
-                    <h2>📂 Мои квизы</h2>
+                    <h2>рџ“‚ РњРѕРё РєРІРёР·С‹</h2>
                     <div id="myQuizzesList" style="max-height: 400px; overflow-y: auto;"></div>
-                    <button class="btn btn-outline w-full mt-3" onclick="closeModal('quizzesListModal')">Закрыть</button>
+                    <button class="btn btn-outline w-full mt-3" onclick="closeModal('quizzesListModal')">Р—Р°РєСЂС‹С‚СЊ</button>
                 </div>
             </div>
 
-            <!-- Модалка редактирования метаданных квиза -->
+            <!-- РњРѕРґР°Р»РєР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ РјРµС‚Р°РґР°РЅРЅС‹С… РєРІРёР·Р° -->
             <div class="preview-modal" id="editQuizModal">
                 <div class="preview-content" style="max-width: 680px;">
-                    <h2>✏️ Настройки квиза</h2>
+                    <h2>вњЏпёЏ РќР°СЃС‚СЂРѕР№РєРё РєРІРёР·Р°</h2>
                     <input type="hidden" id="editQuizId">
                     <div class="form-group">
-                        <label class="form-label">Название</label>
-                        <input type="text" class="input" id="editQuizTitle" maxlength="160" placeholder="Название квиза">
+                        <label class="form-label">РќР°Р·РІР°РЅРёРµ</label>
+                        <input type="text" class="input" id="editQuizTitle" maxlength="160" placeholder="РќР°Р·РІР°РЅРёРµ РєРІРёР·Р°">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Описание</label>
-                        <textarea class="input" id="editQuizDescription" rows="4" maxlength="2000" placeholder="Кратко опишите сценарий и аудиторию"></textarea>
+                        <label class="form-label">РћРїРёСЃР°РЅРёРµ</label>
+                        <textarea class="input" id="editQuizDescription" rows="4" maxlength="2000" placeholder="РљСЂР°С‚РєРѕ РѕРїРёС€РёС‚Рµ СЃС†РµРЅР°СЂРёР№ Рё Р°СѓРґРёС‚РѕСЂРёСЋ"></textarea>
                     </div>
                     <div class="grid-2">
                         <div class="form-group">
-                            <label class="form-label">Категория</label>
-                            <input type="text" class="input" id="editQuizCategory" maxlength="80" placeholder="Например: школа">
+                            <label class="form-label">РљР°С‚РµРіРѕСЂРёСЏ</label>
+                            <input type="text" class="input" id="editQuizCategory" maxlength="80" placeholder="РќР°РїСЂРёРјРµСЂ: С€РєРѕР»Р°">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Обложка</label>
-                            <input type="url" class="input" id="editQuizThumbnailUrl" placeholder="https://... или /uploads/...">
+                            <label class="form-label">РћР±Р»РѕР¶РєР°</label>
+                            <input type="url" class="input" id="editQuizThumbnailUrl" placeholder="https://... РёР»Рё /uploads/...">
                         </div>
                     </div>
                     <div id="editQuizError" class="status-toast error"></div>
                     <div class="d-flex gap-2 mt-3">
-                        <button class="btn btn-primary" onclick="saveQuizMeta()">Сохранить</button>
-                        <button class="btn btn-outline" onclick="closeModal('editQuizModal')">Отмена</button>
+                        <button class="btn btn-primary" onclick="saveQuizMeta()">РЎРѕС…СЂР°РЅРёС‚СЊ</button>
+                        <button class="btn btn-outline" onclick="closeModal('editQuizModal')">РћС‚РјРµРЅР°</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Модалка предпросмотра -->
+            <!-- РњРѕРґР°Р»РєР° РїСЂРµРґРїСЂРѕСЃРјРѕС‚СЂР° -->
             <div class="preview-modal" id="previewModal">
                 <div class="preview-content" style="max-width: 700px;">
-                    <h2>👁️ Предпросмотр квиза</h2>
+                    <h2>рџ‘ЃпёЏ РџСЂРµРґРїСЂРѕСЃРјРѕС‚СЂ РєРІРёР·Р°</h2>
                     <div id="previewContent" style="max-height: 500px; overflow-y: auto;"></div>
-                    <button class="btn btn-outline w-full mt-3" onclick="closeModal('previewModal')">Закрыть</button>
+                    <button class="btn btn-outline w-full mt-3" onclick="closeModal('previewModal')">Р—Р°РєСЂС‹С‚СЊ</button>
                 </div>
             </div>
 
-            <!-- Модалка ИИ-генератора -->
+            <!-- РњРѕРґР°Р»РєР° РР-РіРµРЅРµСЂР°С‚РѕСЂР° -->
             <div class="preview-modal" id="aiGeneratorModal">
                 <div class="preview-content">
-                    <h2>🤖 ИИ-генератор квиза</h2>
+                    <h2>рџ¤– РР-РіРµРЅРµСЂР°С‚РѕСЂ РєРІРёР·Р°</h2>
                     <div class="form-group">
-                        <label class="form-label">Тема квиза</label>
-                        <input type="text" class="input" id="aiTopic" placeholder="Например: История России">
+                        <label class="form-label">РўРµРјР° РєРІРёР·Р°</label>
+                        <input type="text" class="input" id="aiTopic" placeholder="РќР°РїСЂРёРјРµСЂ: РСЃС‚РѕСЂРёСЏ Р РѕСЃСЃРёРё">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Количество вопросов</label>
+                        <label class="form-label">РљРѕР»РёС‡РµСЃС‚РІРѕ РІРѕРїСЂРѕСЃРѕРІ</label>
                         <input type="number" class="input" id="aiQuestionCount" value="10" min="1" max="50">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Сложность</label>
+                        <label class="form-label">РЎР»РѕР¶РЅРѕСЃС‚СЊ</label>
                         <select class="input" id="aiDifficulty">
-                            <option value="easy">Лёгкая</option>
-                            <option value="medium" selected>Средняя</option>
-                            <option value="hard">Сложная</option>
+                            <option value="easy">Р›С‘РіРєР°СЏ</option>
+                            <option value="medium" selected>РЎСЂРµРґРЅСЏСЏ</option>
+                            <option value="hard">РЎР»РѕР¶РЅР°СЏ</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Язык</label>
+                        <label class="form-label">РЇР·С‹Рє</label>
                         <select class="input" id="aiLanguage">
-                            <option value="ru">Русский</option>
+                            <option value="ru">Р СѓСЃСЃРєРёР№</option>
                             <option value="en">English</option>
                         </select>
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-primary" onclick="generateQuizAI()">🤖 Сгенерировать</button>
-                        <button class="btn btn-outline" onclick="closeModal('aiGeneratorModal')">Отмена</button>
+                        <button class="btn btn-primary" onclick="generateQuizAI()">рџ¤– РЎРіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ</button>
+                        <button class="btn btn-outline" onclick="closeModal('aiGeneratorModal')">РћС‚РјРµРЅР°</button>
                     </div>
                     <div id="aiProgress" style="display: none; margin-top: 16px;">
                         <div class="timer-bar">
                             <div class="timer-progress" style="width: 100%; animation: pulse 1.5s infinite;"></div>
                         </div>
-                        <p class="text-center mt-2">Генерация вопросов...</p>
+                        <p class="text-center mt-2">Р“РµРЅРµСЂР°С†РёСЏ РІРѕРїСЂРѕСЃРѕРІ...</p>
                     </div>
                 </div>
             </div>
@@ -121,3 +117,4 @@ const Modals = {
 };
 
 window.Modals = Modals;
+

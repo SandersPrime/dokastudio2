@@ -1,8 +1,9 @@
-// public/js/quiz-constructor.js
+﻿// public/js/quiz-constructor.js
 
 // Управление состоянием перенесено в public/js/state/constructor.state.js
 // Остается для обратной совместимости
 let sortableInstance = null;
+const AUTO_SAVE_ORDER_KEY = 'dokastudio.constructor.autoSaveOrder';
 var currentQuiz = window.currentQuiz || null;
 var questions = Array.isArray(window.questions) ? window.questions : [];
 var currentQuestionIndex = Number.isInteger(window.currentQuestionIndex) ? window.currentQuestionIndex : -1;
@@ -75,8 +76,146 @@ function initConstructor() {
     }
 
     updateSaveStatus('Готов к работе');
+    initQuizMetaInlineEditing();
+    initAutoSaveOrderToggle();
     updateConstructorAvailability();
     openQuizFromQuery();
+}
+
+function initQuizMetaInlineEditing() {
+    const titleEl = document.getElementById('currentQuizTitle');
+    const descEl = document.getElementById('currentQuizDesc');
+
+    if (!titleEl || !descEl) return;
+    if (titleEl.dataset.inlineBound === 'true') return;
+
+    titleEl.dataset.inlineBound = 'true';
+    titleEl.dataset.field = 'title';
+    titleEl.classList.add('quiz-meta-editable');
+
+    descEl.dataset.field = 'description';
+    descEl.classList.add('quiz-meta-editable');
+
+    [titleEl, descEl].forEach((node) => {
+        node.addEventListener('click', () => startQuizMetaInlineEdit(node));
+        node.addEventListener('keydown', (event) => handleQuizMetaInlineKeydown(event, node));
+        node.addEventListener('blur', () => commitQuizMetaInlineEdit(node));
+    });
+}
+
+function startQuizMetaInlineEdit(node) {
+    if (!currentQuiz || !node || node.dataset.editing === 'true') return;
+
+    const field = node.dataset.field;
+    const currentValue = String(currentQuiz?.[field] || '').trim();
+
+    node.dataset.editing = 'true';
+    node.dataset.originalValue = currentValue;
+    node.contentEditable = 'true';
+    node.classList.add('is-editing');
+
+    if (field === 'description' && (!currentValue || currentValue === 'Без описания')) {
+        node.textContent = '';
+    }
+
+    node.focus();
+    const selection = window.getSelection();
+    if (selection) {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+}
+
+function handleQuizMetaInlineKeydown(event, node) {
+    if (node.dataset.editing !== 'true') return;
+
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        node.blur();
+        return;
+    }
+
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        node.textContent = node.dataset.originalValue || '';
+        finishQuizMetaInlineEdit(node);
+    }
+}
+
+function finishQuizMetaInlineEdit(node) {
+    node.contentEditable = 'false';
+    node.classList.remove('is-editing');
+    delete node.dataset.editing;
+    delete node.dataset.originalValue;
+}
+
+async function commitQuizMetaInlineEdit(node) {
+    if (!node || node.dataset.editing !== 'true') return;
+    if (!currentQuiz) {
+        finishQuizMetaInlineEdit(node);
+        return;
+    }
+
+    const field = node.dataset.field;
+    const originalValue = String(node.dataset.originalValue || '').trim();
+    const nextValue = node.textContent.trim();
+
+    if (field === 'title' && !nextValue) {
+        node.textContent = originalValue || currentQuiz.title || '';
+        showToast('Название квиза не может быть пустым', 'error');
+        finishQuizMetaInlineEdit(node);
+        return;
+    }
+
+    if (nextValue === originalValue) {
+        updateQuizDisplay();
+        finishQuizMetaInlineEdit(node);
+        return;
+    }
+
+    try {
+        updateSaveStatus('Сохранение...', 'saving');
+        const payload = field === 'title'
+            ? { title: nextValue }
+            : { description: nextValue };
+
+        const response = await QuizService.update(currentQuiz.id, payload);
+        currentQuiz = {
+            ...currentQuiz,
+            ...response.quiz,
+        };
+        ConstructorState.setCurrentQuiz(currentQuiz);
+        updateQuizDisplay();
+        updateSaveStatus('Сохранено', 'saved');
+        showToast('Изменения квиза сохранены', 'success');
+    } catch (error) {
+        updateQuizDisplay();
+        updateSaveStatus('Ошибка сохранения', 'error');
+        showToast(error.message || 'Ошибка сохранения', 'error');
+    } finally {
+        finishQuizMetaInlineEdit(node);
+    }
+}
+
+function initAutoSaveOrderToggle() {
+    const toggle = document.getElementById('autoSaveOrderToggle');
+    if (!toggle || toggle.dataset.bound === 'true') return;
+
+    toggle.checked = localStorage.getItem(AUTO_SAVE_ORDER_KEY) === '1';
+    toggle.dataset.bound = 'true';
+
+    toggle.addEventListener('change', () => {
+        localStorage.setItem(AUTO_SAVE_ORDER_KEY, toggle.checked ? '1' : '0');
+        showToast(toggle.checked ? 'Автосохранение порядка включено' : 'Автосохранение порядка отключено', 'info');
+    });
+}
+
+function isAutoSaveOrderEnabled() {
+    const toggle = document.getElementById('autoSaveOrderToggle');
+    return Boolean(toggle && toggle.checked && !toggle.disabled);
 }
 
 function updateSaveStatus(message, state = 'idle') {
@@ -180,7 +319,11 @@ async function selectQuiz(quizId) {
         updateQuizDisplay();
         renderQuestionsList();
         enableQuizActions();
-        resetEditor();
+        if (questions.length > 0) {
+            editQuestion(0);
+        } else {
+            resetEditor();
+        }
         updateConstructorAvailability();
         closeModal('quizzesListModal');
         updateSaveStatus('Квиз загружен', 'saved');
@@ -357,7 +500,7 @@ async function deleteQuizById(quizId) {
             updateConstructorAvailability();
         }
 
-        showToast('Квиз удалён', 'success');
+        showToast('Квиз удален', 'success');
         await loadMyQuizzes();
     } catch (error) {
         showToast(error.message || 'Ошибка удаления квиза', 'error');
@@ -400,8 +543,13 @@ function initDragAndDrop() {
             }));
             ConstructorState.setQuestions(questions);
             renderQuestionsList();
-            updateSaveStatus('Порядок изменён', 'dirty');
-            showToast('Порядок изменён. Нажмите "Сохранить порядок"', 'info');
+            if (isAutoSaveOrderEnabled()) {
+                updateSaveStatus('Автосохранение порядка...', 'saving');
+                saveQuizOrder().catch(() => {});
+            } else {
+                updateSaveStatus('Порядок изменен', 'dirty');
+                showToast('Порядок изменен. Включите автосохранение для автоматической отправки', 'info');
+            }
         },
     });
 }
@@ -424,8 +572,8 @@ async function saveQuizOrder() {
         questions = response.questions || questions;
         ConstructorState.setQuestions(questions);
         renderQuestionsList();
-        updateSaveStatus('Порядок сохранён', 'saved');
-        showToast('✅ Порядок сохранён', 'success');
+        updateSaveStatus('Порядок сохранен', 'saved');
+        showToast('Порядок сохранен', 'success');
     } catch (error) {
         showToast(error.message || 'Ошибка сохранения порядка', 'error');
     }
@@ -477,7 +625,35 @@ function createDefaultQuestion(kind = 'QUESTION') {
 }
 
 function getDefaultModeConfig(mode, elementType) {
-    const config = { mode, elementType };
+    const modeToSlideType = {
+        INFO_SLIDE: 'INFO_SLIDE',
+        ROUND_INTRO: 'ROUND_END',
+        JEOPARDY_ROUND: 'TRIVIA_BOARD',
+        MILLIONAIRE_ROUND: 'TRIVIA_LADDER',
+        MAJORITY_RULES: 'MAJORITY_RULES',
+        LAST_MAN_STANDING: 'LAST_MAN_STANDING',
+        WAGER: 'WAGER',
+    };
+
+    const slideType = modeToSlideType[mode] || 'QUESTION';
+    const inputMode = ['IMAGE', 'AUDIO', 'VIDEO', 'TRUE_FALSE', 'TRUEFALSE'].includes(mode)
+        ? (mode === 'TRUEFALSE' ? 'TRUE_FALSE' : mode)
+        : 'MULTIPLE_CHOICE';
+    const questionMode = mode === 'FASTEST_FINGER' ? 'FASTEST_FINGER' : 'EVERYONE_ANSWERS';
+
+    const config = {
+        mode,
+        elementType,
+        slideType,
+        questionMode,
+        inputMode,
+        multipleCorrectMode: 'none',
+        orderedMode: 'exact',
+        transitionMode: 'default',
+        showAnswerPolicy: 'global',
+        logic: {},
+        special: {},
+    };
 
     if (mode === 'JEOPARDY_ROUND') {
         return {
@@ -517,7 +693,7 @@ function addQuizElement(kind = 'QUESTION') {
     renderQuestionsList();
     editQuestion(questions.length - 1);
     updateConstructorAvailability();
-    updateSaveStatus('Новый элемент не сохранён', 'dirty');
+    updateSaveStatus('Новый элемент не сохранен', 'dirty');
 }
 
 function editQuestion(index) {
@@ -532,7 +708,7 @@ function editQuestion(index) {
     updateQuestionEditorUI(question);
     loadAdvancedSettings(question);
     updateConstructorAvailability();
-    updateSaveStatus(question.id ? 'Вопрос открыт' : 'Новый вопрос не сохранён', question.id ? 'idle' : 'dirty');
+    updateSaveStatus(question.id ? 'Вопрос открыт' : 'Новый вопрос не сохранен', question.id ? 'idle' : 'dirty');
 }
 
 function resetEditor() {
@@ -556,7 +732,7 @@ function setQuestionType(type) {
     question.type = type;
     question.gameMode = type;
     question.layoutType = getLayoutTypeForMode(type, question.elementType);
-    updateSaveStatus('Тип вопроса изменён', 'dirty');
+    updateSaveStatus('Тип вопроса изменен', 'dirty');
 
     if (type === 'TRUE_FALSE' || type === 'TRUEFALSE') {
         question.answers = [
@@ -589,6 +765,38 @@ function setQuestionType(type) {
             { text: 'Неправильный ответ', isCorrect: false, order: 1 },
         ];
     }
+
+    const config = (typeof QuestionEditorComponent !== 'undefined' && QuestionEditorComponent.parseConfig)
+        ? QuestionEditorComponent.parseConfig(question)
+        : {};
+    const modeToSlideType = {
+        INFO_SLIDE: 'INFO_SLIDE',
+        ROUND_INTRO: 'ROUND_END',
+        JEOPARDY_ROUND: 'TRIVIA_BOARD',
+        MILLIONAIRE_ROUND: 'TRIVIA_LADDER',
+        MAJORITY_RULES: 'MAJORITY_RULES',
+        LAST_MAN_STANDING: 'LAST_MAN_STANDING',
+        WAGER: 'WAGER',
+    };
+    const inferredSlideType = modeToSlideType[type] || 'QUESTION';
+    const inferredInputMode = ['IMAGE', 'AUDIO', 'VIDEO', 'TRUE_FALSE', 'TRUEFALSE'].includes(type)
+        ? (type === 'TRUEFALSE' ? 'TRUE_FALSE' : type)
+        : (type === 'ORDERED' ? 'ORDERED_ANSWERS' : (type === 'MULTIPLE_CORRECT' ? 'MULTIPLE_CORRECT_MULTI_PICK' : 'MULTIPLE_CHOICE'));
+
+    question.configJson = JSON.stringify({
+        ...config,
+        mode: type,
+        elementType: question.elementType,
+        slideType: config.slideType || inferredSlideType,
+        questionMode: type === 'FASTEST_FINGER' ? 'FASTEST_FINGER' : (config.questionMode || 'EVERYONE_ANSWERS'),
+        inputMode: config.inputMode || inferredInputMode,
+        multipleCorrectMode: config.multipleCorrectMode || 'none',
+        orderedMode: config.orderedMode || 'exact',
+        transitionMode: config.transitionMode || 'default',
+        showAnswerPolicy: config.showAnswerPolicy || 'global',
+        logic: config.logic || {},
+        special: config.special || {},
+    });
 
     applyQuestionTypeUI(type);
     syncMediaPreview(question);
@@ -644,7 +852,7 @@ function syncPreviewFromProperties() {
         ConstructorState.setQuestions(questions);
         QuestionEditorComponent.renderStudioPreview(question);
         renderQuestionsList();
-        updateSaveStatus('Есть несохранённые изменения', 'dirty');
+        updateSaveStatus('Есть несохраненные изменения', 'dirty');
     } catch (error) {
         updateSaveStatus('Проверьте поля элемента', 'error');
     }
@@ -692,7 +900,7 @@ function updatePreviewField(fieldId, value) {
         if (fieldId === 'questionSubtitle') questions[currentQuestionIndex].subtitle = normalizedValue;
         ConstructorState.setQuestions(questions);
         renderQuestionsList();
-        updateSaveStatus('Есть несохранённые изменения', 'dirty');
+        updateSaveStatus('Есть несохраненные изменения', 'dirty');
     }
 }
 
@@ -742,8 +950,8 @@ async function saveCurrentQuestion() {
         editQuestion(currentQuestionIndex);
         ConstructorState.markSaved();
         updateConstructorAvailability();
-        updateSaveStatus('Вопрос сохранён', 'saved');
-        showToast('✅ Вопрос сохранён', 'success');
+        updateSaveStatus('Вопрос сохранен', 'saved');
+        showToast('Вопрос сохранен', 'success');
     } catch (error) {
         updateSaveStatus('Ошибка сохранения', 'error');
         showToast(error.message || 'Ошибка сохранения вопроса', 'error');
@@ -778,8 +986,8 @@ async function deleteCurrentQuestion() {
         renderQuestionsList();
         resetEditor();
         updateConstructorAvailability();
-        updateSaveStatus('Вопрос удалён', 'saved');
-        showToast('🗑️ Вопрос удалён', 'success');
+        updateSaveStatus('Вопрос удален', 'saved');
+        showToast('Вопрос удален', 'success');
     } catch (error) {
         showToast(error.message || 'Ошибка удаления вопроса', 'error');
     }
@@ -796,7 +1004,7 @@ function setCorrectAnswer(index) {
     renderAnswersEditor(questions[currentQuestionIndex].answers);
     QuestionEditorComponent.renderStudioPreview(questions[currentQuestionIndex]);
     ConstructorState.setQuestions(questions);
-    updateSaveStatus('Правильный ответ изменён', 'dirty');
+    updateSaveStatus('Правильный ответ изменен', 'dirty');
 }
 
 function updateAnswerText(index, value) {
@@ -809,7 +1017,7 @@ function updateAnswerText(index, value) {
         editorInput.value = value;
     }
     ConstructorState.setQuestions(questions);
-    updateSaveStatus('Есть несохранённые изменения', 'dirty');
+    updateSaveStatus('Есть несохраненные изменения', 'dirty');
 }
 
 function addAnswer() {
@@ -855,7 +1063,7 @@ function removeAnswer(index) {
     ConstructorState.setQuestions(questions);
     renderAnswersEditor(answers);
     QuestionEditorComponent.renderStudioPreview(questions[currentQuestionIndex]);
-    updateSaveStatus('Ответ удалён', 'dirty');
+    updateSaveStatus('Ответ удален', 'dirty');
 }
 
 async function uploadMedia(event) {
@@ -872,7 +1080,7 @@ async function uploadMedia(event) {
 
     try {
         if (uploadPlaceholder) {
-            uploadPlaceholder.textContent = '⏳ Загрузка...';
+            uploadPlaceholder.textContent = 'Загрузка...';
         }
 
         const response = await UploadAPI.uploadFile(file);
@@ -887,7 +1095,7 @@ async function uploadMedia(event) {
         QuestionEditorComponent.renderStudioPreview(question);
 
         if (uploadPlaceholder) {
-            uploadPlaceholder.textContent = '✅ Файл загружен';
+            uploadPlaceholder.textContent = 'Файл загружен';
         }
 
         document.getElementById('mediaUploadArea')?.classList.add('has-file');
@@ -895,7 +1103,7 @@ async function uploadMedia(event) {
         showToast('Файл загружен', 'success');
     } catch (error) {
         if (uploadPlaceholder) {
-            uploadPlaceholder.textContent = '📁 Нажмите или перетащите файл';
+            uploadPlaceholder.textContent = 'Нажмите или перетащите файл';
         }
         showToast(error.message || 'Ошибка загрузки файла', 'error');
     }
@@ -911,7 +1119,7 @@ function initMediaDragAndDrop() {
     const resetHint = () => {
         const placeholder = document.getElementById('uploadPlaceholder');
         if (placeholder && !uploadArea.classList.contains('has-file')) {
-            placeholder.textContent = '📁 Нажмите или перетащите файл';
+            placeholder.textContent = 'Нажмите или перетащите файл';
         }
     };
 
@@ -985,3 +1193,4 @@ window.createQuiz = async function createQuizFromModal() {
 window.showAIGenerator = function showAIGenerator() {
     showModal('aiGeneratorModal');
 };
+

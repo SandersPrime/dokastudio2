@@ -1,12 +1,12 @@
-// public/js/components/question-editor.js
+﻿// public/js/components/question-editor.js
 
 /**
- * Компонент редактора вопроса.
- * Вынесен из constructor-ui.js.
+ * РљРѕРјРїРѕРЅРµРЅС‚ СЂРµРґР°РєС‚РѕСЂР° РІРѕРїСЂРѕСЃР°.
+ * Р’С‹РЅРµСЃРµРЅ РёР· constructor-ui.js.
  */
 const QuestionEditorComponent = {
   /**
-   * Обновляет UI редактора под текущий вопрос.
+   * РћР±РЅРѕРІР»СЏРµС‚ UI СЂРµРґР°РєС‚РѕСЂР° РїРѕРґ С‚РµРєСѓС‰РёР№ РІРѕРїСЂРѕСЃ.
    * @param {Object|null} question
    */
   updateQuestionEditorUI(question) {
@@ -25,7 +25,7 @@ const QuestionEditorComponent = {
   },
 
   /**
-   * Очищает редактор.
+   * РћС‡РёС‰Р°РµС‚ СЂРµРґР°РєС‚РѕСЂ.
    */
   clearEditor() {
     this.showEditorPlaceholder();
@@ -70,7 +70,7 @@ const QuestionEditorComponent = {
   },
 
   /**
-   * Применяет UI в зависимости от типа вопроса.
+   * РџСЂРёРјРµРЅСЏРµС‚ UI РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РёРїР° РІРѕРїСЂРѕСЃР°.
    * @param {string} type
    */
   applyQuestionTypeUI(type) {
@@ -88,7 +88,7 @@ const QuestionEditorComponent = {
   },
 
   /**
-   * Заполняет основную форму вопроса.
+   * Р—Р°РїРѕР»РЅСЏРµС‚ РѕСЃРЅРѕРІРЅСѓСЋ С„РѕСЂРјСѓ РІРѕРїСЂРѕСЃР°.
    * @param {Object} question
    */
   populateQuestionForm(question) {
@@ -136,7 +136,7 @@ const QuestionEditorComponent = {
   },
 
   /**
-   * Отрисовывает редактор ответов.
+   * РћС‚СЂРёСЃРѕРІС‹РІР°РµС‚ СЂРµРґР°РєС‚РѕСЂ РѕС‚РІРµС‚РѕРІ.
    * @param {Array<Object>} answers
    */
   renderAnswersEditor(answers = []) {
@@ -146,7 +146,7 @@ const QuestionEditorComponent = {
     container.innerHTML = answers.map((answer, index) => `
       <div class="answer-item ${answer.isCorrect ? 'correct' : ''}" data-index="${index}">
         <div class="d-flex items-center gap-2">
-          <button type="button" class="btn btn-outline btn-xs drag-handle">☰</button>
+          <button type="button" class="btn btn-outline btn-xs drag-handle">≡</button>
           <input
             type="text"
             class="input answer-input flex-1"
@@ -155,20 +155,20 @@ const QuestionEditorComponent = {
             oninput="updateAnswerText(${index}, this.value); syncPreviewFromProperties()"
           >
           <button type="button" class="btn btn-success btn-xs" onclick="setCorrectAnswer(${index})">
-            ${answer.isCorrect ? '✅' : '☑️'}
+            ${answer.isCorrect ? '✓' : '○'}
           </button>
-          <button type="button" class="btn btn-danger btn-xs" onclick="removeAnswer(${index})">🗑️</button>
+          <button type="button" class="btn btn-danger btn-xs" onclick="removeAnswer(${index})">✕</button>
         </div>
       </div>
     `).join('');
   },
 
   /**
-   * Отрисовывает специфичные для типа вопроса поля.
+   * РћС‚СЂРёСЃРѕРІС‹РІР°РµС‚ СЃРїРµС†РёС„РёС‡РЅС‹Рµ РґР»СЏ С‚РёРїР° РІРѕРїСЂРѕСЃР° РїРѕР»СЏ.
    * @param {Object} question
    */
   renderQuestionSpecificInputs(question) {
-    // Можно расширить для других типов
+    // РњРѕР¶РЅРѕ СЂР°СЃС€РёСЂРёС‚СЊ РґР»СЏ РґСЂСѓРіРёС… С‚РёРїРѕРІ
     const mode = question.gameMode || question.type;
     if (mode === 'TRUEFALSE' || mode === 'TRUE_FALSE') {
       this.updateTrueFalseUI(question);
@@ -201,21 +201,28 @@ const QuestionEditorComponent = {
     const type = question.gameMode || question.type || 'EVERYONE_ANSWERS';
     const elementType = question.elementType || question.layoutType || 'QUESTION';
     const config = this.parseConfig(question);
+    const slideType = config.slideType || (elementType === 'INFO_SLIDE' ? 'INFO_SLIDE' : 'QUESTION');
     const appearance = config.appearance || {};
-    const typeLabel = this.getQuestionTypeLabel(type);
+    const typeLabel = this.getQuestionTypeLabel(slideType === 'QUESTION' ? type : slideType);
     canvas.dataset.mode = type;
     canvas.dataset.elementType = elementType;
     canvas.dataset.template = appearance.template || 'classic';
     canvas.dataset.answerLayout = appearance.answerLayout || 'grid-2';
     canvas.style.backgroundColor = question.backgroundColor || '#f6f8fb';
     canvas.style.backgroundImage = question.backgroundImageUrl ? `url("${question.backgroundImageUrl}")` : 'none';
+    canvas.style.setProperty('--studio-bg-gradient', appearance.backgroundGradient || '');
     canvas.style.setProperty('--studio-title-color', appearance.titleColor || '#111827');
     canvas.style.setProperty('--studio-answer-color', appearance.answerColor || '#111827');
+    canvas.style.setProperty('--studio-answer-chip-color', appearance.answerChipColor || '#6a4fff');
     canvas.style.setProperty('--studio-title-size', `${appearance.titleSize || 48}px`);
     canvas.style.setProperty('--studio-answer-size', `${appearance.answerSize || 18}px`);
+    canvas.style.setProperty('--studio-question-font', appearance.questionFont || "'Inter', sans-serif");
+    canvas.style.setProperty('--studio-answer-font', appearance.answerFont || "'Inter', sans-serif");
+    canvas.style.setProperty('--studio-text-align', appearance.textAlign || 'left');
 
     title.textContent = question.text || 'Введите текст вопроса';
     if (subtitle) subtitle.textContent = question.subtitle || '';
+    if (subtitle) subtitle.style.textAlign = appearance.textAlign || 'left';
     if (typeBadge) typeBadge.textContent = typeLabel;
     if (modeLabel) modeLabel.textContent = elementType;
     if (elementTitle) elementTitle.textContent = `${typeLabel} - ${elementType}`;
@@ -225,7 +232,7 @@ const QuestionEditorComponent = {
     if (special) special.innerHTML = this.renderSpecialLayout(question);
 
     const answers = Array.isArray(question.answers) ? question.answers : [];
-    const hideAnswers = ['INFO_SLIDE', 'ROUND_INTRO', 'JEOPARDY_ROUND'].includes(type);
+    const hideAnswers = slideType !== 'QUESTION' || ['INFO_SLIDE', 'ROUND_INTRO', 'JEOPARDY_ROUND'].includes(type);
     answersGrid.style.display = hideAnswers ? 'none' : 'grid';
     answersGrid.innerHTML = hideAnswers ? '' : answers.map((answer, index) => `
       <button class="preview-answer ${answer.isCorrect ? 'correct' : ''}" type="button">
@@ -248,9 +255,11 @@ const QuestionEditorComponent = {
 
   renderSpecialLayout(question) {
     const type = question.gameMode || question.type || 'EVERYONE_ANSWERS';
+    const config = this.parseConfig(question);
+    const slideType = config.slideType || 'QUESTION';
+    const previewMode = slideType !== 'QUESTION' ? slideType : type;
 
-    if (type === 'JEOPARDY_ROUND') {
-      const config = this.parseConfig(question);
+    if (previewMode === 'JEOPARDY_ROUND' || previewMode === 'TRIVIA_BOARD') {
       const categories = config.categories || ['Тема 1', 'Тема 2', 'Тема 3', 'Тема 4'];
       const values = config.values || [100, 200, 300, 400, 500];
       return `
@@ -269,8 +278,7 @@ const QuestionEditorComponent = {
       `;
     }
 
-    if (type === 'MILLIONAIRE_ROUND') {
-      const config = this.parseConfig(question);
+    if (previewMode === 'MILLIONAIRE_ROUND' || previewMode === 'TRIVIA_LADDER') {
       const ladder = config.ladder || [100, 200, 400, 800, 1500, 3000, 6000, 12000, 25000, 50000, 100000, 250000, 500000, 1000000];
       return `
         <div class="special-layout-header">
@@ -286,14 +294,21 @@ const QuestionEditorComponent = {
     }
 
     const callouts = {
-      FASTEST_FINGER: 'Режим на скорость: игроки отвечают первыми, lockout включён.',
+      FASTEST_FINGER: 'Режим на скорость: игроки отвечают первыми, блокировка включена.',
       WAGER: 'Игроки делают ставку перед ответом.',
-      MAJORITY_RULES: 'Раскрывайте самые популярные ответы по одному.',
+      MAJORITY_RULES: 'Показывайте популярные ответы по одному.',
       DECREASING_POINTS: 'Очки снижаются от стартовых к финальным по мере времени.',
       LAST_MAN_STANDING: 'Неверный ответ исключает игрока до финала.',
+      ROUND_END: 'Слайд завершает раунд и готовит переход к следующей части.',
+      DEMOGRAPHIC: 'Слайд делит участников на группы по выбранному признаку.',
+      AUDIENCE_RESPONSE: 'Опрос без влияния на очки, результаты можно показать графиком.',
+      TRIVIA_FEUD: 'Режим 100 к 1: угадывание самых популярных ответов.',
+      SPEED_ROUND: 'Серия быстрых вопросов с общим таймером.',
+      BINGO: 'Режим бинго с проверкой заявок и подсчетом очков.',
+      GAME_MODULE: 'Слайд запускает отдельный игровой модуль.',
     };
 
-    return callouts[type] ? `<div class="mode-callout">${callouts[type]}</div>` : '';
+    return callouts[previewMode] ? `<div class="mode-callout">${callouts[previewMode]}</div>` : '';
   },
 
   updateJeopardyCategory(index, value) {
@@ -355,12 +370,12 @@ const QuestionEditorComponent = {
       window.ConstructorState.setQuestions(questions);
     }
     if (typeof updateSaveStatus === 'function') {
-      updateSaveStatus('Есть несохранённые изменения', 'dirty');
+      updateSaveStatus('Есть несохраненные изменения', 'dirty');
     }
   },
 
   /**
-   * Обновляет UI для вопроса типа TRUEFALSE.
+   * РћР±РЅРѕРІР»СЏРµС‚ UI РґР»СЏ РІРѕРїСЂРѕСЃР° С‚РёРїР° TRUEFALSE.
    * @param {Object} question
    */
   updateTrueFalseUI(question) {
@@ -372,7 +387,7 @@ const QuestionEditorComponent = {
   },
 
   /**
-   * Синхронизирует превью медиа.
+   * РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚ РїСЂРµРІСЊСЋ РјРµРґРёР°.
    * @param {Object} question
    */
   syncMediaPreview(question) {
@@ -398,7 +413,7 @@ const QuestionEditorComponent = {
   },
 
   /**
-   * Очищает превью медиа.
+   * РћС‡РёС‰Р°РµС‚ РїСЂРµРІСЊСЋ РјРµРґРёР°.
    */
   clearMediaPreview() {
     const preview = document.getElementById('mediaPreview');
@@ -408,15 +423,58 @@ const QuestionEditorComponent = {
   },
 
   /**
-   * Очищает редактор ответов.
+   * РћС‡РёС‰Р°РµС‚ СЂРµРґР°РєС‚РѕСЂ РѕС‚РІРµС‚РѕРІ.
    */
   clearAnswersEditor() {
     const container = document.getElementById('answersEditor');
     if (container) container.innerHTML = '';
   },
 
+  getQuestionTypeLabel(type) {
+    const labels = {
+      TEXT: 'Текстовый вопрос',
+      EVERYONE_ANSWERS: 'Все отвечают',
+      FASTEST_FINGER: 'Кто быстрее',
+      MULTIPLE_CORRECT: 'Несколько правильных',
+      IMAGE: 'Вопрос с изображением',
+      AUDIO: 'Вопрос с аудио',
+      VIDEO: 'Вопрос с видео',
+      TRUEFALSE: 'Правда / Ложь',
+      TRUE_FALSE: 'Правда / Ложь',
+      MULTIPLE: 'Выбор',
+      ORDERED: 'Верный порядок',
+      DECREASING_POINTS: 'Убывающие очки',
+      WAGER: 'Ставка',
+      MAJORITY_RULES: 'Большинство / Семейная',
+      LAST_MAN_STANDING: 'Последний выживший',
+      JEOPARDY_ROUND: 'Раунд «Своя игра»',
+      MILLIONAIRE_ROUND: 'Раунд «Миллионер»',
+      INFO_SLIDE: 'Инфо-слайд',
+      ROUND_INTRO: 'Вступление раунда',
+      ROUND_END: 'Конец раунда',
+      DEMOGRAPHIC: 'Демографический',
+      AUDIENCE_RESPONSE: 'Опрос аудитории',
+      TRIVIA_BOARD: 'Табло вопросов',
+      TRIVIA_LADDER: 'Лестница',
+      TRIVIA_FEUD: '100 к 1',
+      SPEED_ROUND: 'Быстрый раунд',
+      BINGO: 'Бинго',
+      GAME_MODULE: 'Игровой модуль',
+      MULTIPLE_CHOICE: 'Множественный выбор',
+      MULTIPLE_CORRECT_SINGLE_PICK: 'Несколько правильных (single)',
+      MULTIPLE_CORRECT_MULTI_PICK: 'Несколько правильных (multi)',
+      ORDERED_ANSWERS: 'Упорядочивание',
+      OPEN_ENDED: 'Открытый ответ',
+      NUMERIC_INPUT: 'Числовой ввод',
+      TEXT_INPUT: 'Текстовый ввод',
+      INITIAL_LETTER_INPUT: 'Первая буква',
+    };
+
+    return labels[type] || type || 'Элемент';
+  },
+
   /**
-   * Экранирует HTML для безопасности.
+   * Р­РєСЂР°РЅРёСЂСѓРµС‚ HTML РґР»СЏ Р±РµР·РѕРїР°СЃРЅРѕСЃС‚Рё.
    * @param {string} text
    * @returns {string}
    */
@@ -427,12 +485,13 @@ const QuestionEditorComponent = {
   }
 };
 
-// Экспорт функций для совместимости
+// Р­РєСЃРїРѕСЂС‚ С„СѓРЅРєС†РёР№ РґР»СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё
 window.updateQuestionEditorUI = (question) => QuestionEditorComponent.updateQuestionEditorUI(question);
 window.renderQuestionSpecificInputs = (question) => QuestionEditorComponent.renderQuestionSpecificInputs(question);
 window.syncMediaPreview = (question) => QuestionEditorComponent.syncMediaPreview(question);
 window.applyQuestionTypeUI = (type) => QuestionEditorComponent.applyQuestionTypeUI(type);
 window.renderAnswersEditor = (answers) => QuestionEditorComponent.renderAnswersEditor(answers);
 
-// Экспорт компонента
+// Р­РєСЃРїРѕСЂС‚ РєРѕРјРїРѕРЅРµРЅС‚Р°
 window.QuestionEditorComponent = window.QuestionEditorComponent || QuestionEditorComponent;
+

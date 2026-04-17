@@ -92,81 +92,7 @@ function renderAdvancedSettingsPanel() {
 }
 
 function initSettingsToolbarDropdowns() {
-    const toolbar = document.querySelector('.constructor-settings-panel');
-    if (!toolbar || toolbar.dataset.dropdownsReady === 'true') return;
-
-    if (window.DOKA_USE_COMPONENT_RIBBON) {
-        toolbar.dataset.dropdownsReady = 'component-ribbon';
-        if (window.DokaRibbon?.init) window.DokaRibbon.init();
-        return;
-    }
-
-    initStudioRibbonTabs(toolbar);
-
-    toolbar.querySelectorAll('.panel-section').forEach((section) => {
-        const title = section.querySelector('h3');
-        if (!title) return;
-
-        let body = section.querySelector('.panel-section-body');
-        if (!body) {
-            body = document.createElement('div');
-            body.className = 'panel-section-body';
-
-            Array.from(section.children).forEach((child) => {
-                if (child !== title) body.appendChild(child);
-            });
-
-            section.appendChild(body);
-        }
-
-        title.setAttribute('role', 'button');
-        title.setAttribute('tabindex', '0');
-        title.setAttribute('aria-expanded', 'false');
-
-        const toggle = (event) => {
-            if (toolbar.classList.contains('ribbon-mode')) return;
-            event.stopPropagation();
-            const isOpen = section.classList.contains('is-open');
-
-            toolbar.querySelectorAll('.panel-section.is-open').forEach((openSection) => {
-                openSection.classList.remove('is-open');
-                openSection.querySelector('h3')?.setAttribute('aria-expanded', 'false');
-            });
-
-            if (!isOpen) {
-                section.classList.add('is-open');
-                title.setAttribute('aria-expanded', 'true');
-            }
-        };
-
-        title.addEventListener('click', toggle);
-        title.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                toggle(event);
-            }
-        });
-
-        body.addEventListener('click', (event) => event.stopPropagation());
-    });
-
-    document.addEventListener('click', () => {
-        if (toolbar.classList.contains('ribbon-mode')) return;
-        toolbar.querySelectorAll('.panel-section.is-open').forEach((section) => {
-            section.classList.remove('is-open');
-            section.querySelector('h3')?.setAttribute('aria-expanded', 'false');
-        });
-    });
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape') return;
-        toolbar.querySelectorAll('.panel-section.is-open').forEach((section) => {
-            section.classList.remove('is-open');
-            section.querySelector('h3')?.setAttribute('aria-expanded', 'false');
-        });
-    });
-
-    toolbar.dataset.dropdownsReady = 'true';
+    if (window.DokaRibbon?.init) window.DokaRibbon.init();
 }
 
 function initStudioRibbonTabs(toolbar) {
@@ -353,6 +279,11 @@ function loadAdvancedSettings(question) {
     setValue('questionTemplate', appearance.template, 'classic');
     setValue('titleColor', appearance.titleColor, '#111827');
     setValue('answerColor', appearance.answerColor, '#111827');
+    setValue('answerChipColor', appearance.answerChipColor, '#6a4fff');
+    setValue('questionFont', appearance.questionFont, "'Inter', sans-serif");
+    setValue('answerFont', appearance.answerFont, "'Inter', sans-serif");
+    setValue('textAlign', appearance.textAlign, 'left');
+    setValue('backgroundGradient', appearance.backgroundGradient, '');
     setValue('titleSize', appearance.titleSize, 48);
     setValue('answerSize', appearance.answerSize, 18);
     setValue('answerLayout', appearance.answerLayout, 'grid-2');
