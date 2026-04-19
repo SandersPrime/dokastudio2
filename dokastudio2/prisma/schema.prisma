@@ -1,0 +1,475 @@
+// schema.prisma - упрощённая версия для SQLite
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ПОЛЬЗОВАТЕЛИ
+// ============================================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  role         String   @default("USER")
+  avatarUrl    String?  @map("avatar_url")
+  balance      Float    @default(0.0)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  quizzes          Quiz[]           @relation("Author")
+  purchases        Purchase[]       @relation("BuyerPurchases")
+  authoredSales    Purchase[]       @relation("AuthorSales")
+  payoutRequests   PayoutRequest[]
+  hostedGames      GameSession[]    @relation("Host")
+  hostProfile      HostProfile?
+  flashcardSets    FlashcardSet[]
+  homeworks        Homework[]
+  bookingsAsClient Booking[]        @relation("Client")
+  equipmentOrders  EquipmentOrder[] // ← вот эта строка
+}
+
+model HostProfile {
+  id                String  @id @default(cuid())
+  userId            String  @unique @map("user_id")
+  user              User    @relation(fields: [userId], references: [id])
+  bio               String?
+  experience        Int     @default(0)
+  ratePerHour       Float   @default(1000.0) @map("rate_per_hour")
+  rating            Float   @default(5.0)
+  isAvailable       Boolean @default(true) @map("is_available")
+  portfolioVideoUrl String? @map("portfolio_video_url")
+  eventsCount       Int     @default(0) @map("events_count")
+
+  bookings Booking[]
+}
+
+// ============================================
+// КВИЗЫ
+// ============================================
+
+model Quiz {
+  id           String  @id @default(cuid())
+  title        String
+  description  String?
+  thumbnailUrl String? @map("thumbnail_url")
+  authorId     String  @map("author_id")
+  author       User    @relation("Author", fields: [authorId], references: [id])
+
+  isPrivate       Boolean @default(false) @map("is_private")
+  hasTimer        Boolean @default(true) @map("has_timer")
+  timePerQuestion Int     @default(30) @map("time_per_question")
+  showLeaderboard Boolean @default(true) @map("show_leaderboard")
+  allowReconnect  Boolean @default(true) @map("allow_reconnect")
+
+  isPublished Boolean @default(false) @map("is_published")
+  isTemplate  Boolean @default(false) @map("is_template")
+  isPaid      Boolean @default(false) @map("is_paid")
+  price       Float   @default(0.0)
+  discount    Float?  @default(0.0)
+  salesCount  Int     @default(0) @map("sales_count")
+  category    String?
+  ageGroup    String? @map("age_group")
+  format      String?
+  marketplaceStatus String    @default("DRAFT") @map("marketplace_status")
+  licenseType       String?   @map("license_type")
+  publishedAt       DateTime? @map("published_at")
+  rejectionReason   String?   @map("rejection_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  rounds       QuizRound[]
+  questions    Question[]
+  purchases    Purchase[]
+  gameSessions GameSession[]
+  homeworks    Homework[]
+
+  @@index([authorId])
+  @@index([authorId, updatedAt])
+  @@index([isPublished])
+}
+
+// ============================================
+// ШАБЛОНЫ ИГР
+// ============================================
+
+model Template {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  description     String?
+  category        String?
+  format          String?
+  durationMinutes Int?     @map("duration_minutes")
+  audience        String?
+  difficulty      String?
+  coverImage      String?  @map("cover_image")
+  tags            String   @default("[]")
+  structureJson   String   @default("{}") @map("structure_json")
+  stylePresetJson String   @default("{}") @map("style_preset_json")
+  logicPresetJson String   @default("{}") @map("logic_preset_json")
+  isPublished     Boolean  @default(false) @map("is_published")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@index([isPublished])
+}
+
+model QuizRound {
+  id     String @id @default(cuid())
+  quizId String @map("quiz_id")
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  title  String
+  order  Int    @map("order_index")
+  roundType  String? @map("round_type")
+  configJson String? @map("config_json")
+
+  questions Question[]
+}
+
+model Question {
+  id      String     @id @default(cuid())
+  quizId  String     @map("quiz_id")
+  quiz    Quiz       @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  roundId String?    @map("round_id")
+  round   QuizRound? @relation(fields: [roundId], references: [id])
+
+  text              String
+  subtitle          String? @map("subtitle")
+  imageUrl          String? @map("image_url")
+  audioUrl          String? @map("audio_url")
+  videoUrl          String? @map("video_url")
+  elementType       String  @default("QUESTION") @map("element_type")
+  type              String  @default("TEXT")
+  layoutType        String  @default("QUESTION") @map("layout_type")
+  gameMode          String? @map("game_mode")
+  backgroundColor   String? @map("background_color")
+  backgroundImageUrl String? @map("background_image_url")
+  configJson        String? @map("config_json")
+  points            Int     @default(100)
+  order             Int     @map("order_index")
+  timeLimit         Int?    @map("time_limit")
+  pointsAtStart     Int     @default(100) @map("points_at_start")
+  pointsAtEnd       Int     @default(100) @map("points_at_end")
+  penaltyPoints     Int     @default(0) @map("penalty_points")
+  penaltyNoAnswer   Int     @default(0) @map("penalty_no_answer")
+  speedBonus1       Int     @default(0) @map("speed_bonus_1")
+  speedBonus2       Int     @default(0) @map("speed_bonus_2")
+  speedBonus3       Int     @default(0) @map("speed_bonus_3")
+  autoJudge         Boolean @default(true) @map("auto_judge")
+  lockoutOnWrong    Boolean @default(true) @map("lockout_on_wrong")
+  showCorrectAnswer Boolean @default(true) @map("show_correct_answer")
+  countdownMode     String  @default("auto") @map("countdown_mode")
+  textReveal        String  @default("none") @map("text_reveal")
+  jokersEnabled     Boolean @default(true) @map("jokers_enabled")
+  demographicGroup  String? @map("demographic_group")
+  slideRouting      String? @map("slide_routing")
+  notes             String? @map("notes")
+
+  answers Answer[]
+}
+
+model Homework {
+  id                 String    @id @default(cuid())
+  quizId             String
+  teacherId          String
+  title              String
+  description        String?
+  pinCode            String    @unique
+  status             String    @default("DRAFT")
+  dueDate            DateTime?
+  maxAttempts        Int       @default(1)
+  showCorrectAnswers Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  quiz        Quiz                 @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  teacher     User                 @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  submissions HomeworkSubmission[]
+}
+
+model HomeworkSubmission {
+  id            String    @id @default(cuid())
+  homeworkId    String
+  studentName   String
+  attemptNumber Int
+  score         Int       @default(0)
+  maxScore      Int       @default(0)
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  isCompleted   Boolean   @default(false)
+  answersJson   String    @default("[]")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  homework Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+
+  @@unique([homeworkId, studentName, attemptNumber])
+  @@index([homeworkId, studentName])
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  questionId String   @map("question_id")
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  imageUrl   String?  @map("image_url")
+  isCorrect  Boolean  @default(false) @map("is_correct")
+  order      Int      @default(0)
+}
+
+// ============================================
+// МАРКЕТПЛЕЙС
+// ============================================
+
+model Purchase {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  user   User   @relation("BuyerPurchases", fields: [userId], references: [id])
+  authorId String @map("author_id")
+  author   User   @relation("AuthorSales", fields: [authorId], references: [id])
+  quizId String @map("quiz_id")
+  quiz   Quiz   @relation(fields: [quizId], references: [id])
+
+  amount        Float
+  platformFee   Float @map("platform_fee")
+  authorEarning Float @map("author_earning")
+  pricePaid     Float @default(0.0) @map("price_paid")
+  authorRevenue Float @default(0.0) @map("author_revenue")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, quizId])
+}
+
+model PayoutRequest {
+  id            String    @id @default(cuid())
+  authorId      String    @map("author_id")
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  amount        Float
+  status        String    @default("PENDING")
+  payoutMethod  String    @map("payout_method")
+  payoutDetails String    @map("payout_details")
+  adminNote     String?   @map("admin_note")
+  requestedAt   DateTime  @default(now()) @map("requested_at")
+  processedAt   DateTime? @map("processed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([authorId, status])
+}
+
+// ============================================
+// ОБОРУДОВАНИЕ
+// ============================================
+
+model Equipment {
+  id               String  @id @default(cuid())
+  name             String
+  description      String?
+  category         String
+  priceBuy         Float?  @map("price_buy")
+  priceRentDay     Float?  @map("price_rent_day")
+  stockCount       Int     @default(0) @map("stock_count")
+  availableForRent Boolean @default(true) @map("available_for_rent")
+  imageUrl         String? @map("image_url") // Одна картинка вместо массива
+
+  orders EquipmentOrder[]
+}
+
+model EquipmentOrder {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  equipmentId String    @map("equipment_id")
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+
+  type            String // "BUY" или "RENT"
+  quantity        Int
+  totalPrice      Float     @map("total_price")
+  rentStart       DateTime? @map("rent_start")
+  rentEnd         DateTime? @map("rent_end")
+  status          String    @default("PENDING") // PENDING, CONFIRMED, SHIPPED, DELIVERED, RETURNED, CANCELLED
+  deliveryAddress String?   @map("delivery_address")
+
+  createdAt DateTime @default(now()) @map("created_at")
+}
+
+model EquipmentProduct {
+  id               String   @id @default(cuid())
+  title            String
+  slug             String   @unique
+  description      String?
+  shortDescription String?  @map("short_description")
+  imageUrl         String?  @map("image_url")
+  galleryJson      String   @default("[]") @map("gallery_json")
+  category         String?
+  scenarioType     String?  @map("scenario_type")
+  price            Float    @default(0.0)
+  rentalPriceDay   Float    @default(0.0) @map("rental_price_day")
+  depositAmount    Float    @default(0.0) @map("deposit_amount")
+  stockQty         Int      @default(0) @map("stock_qty")
+  availableForSale Boolean  @default(true) @map("available_for_sale")
+  availableForRent Boolean  @default(true) @map("available_for_rent")
+  isPublished      Boolean  @default(false) @map("is_published")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  requests         EquipmentRequest[]
+}
+
+model EquipmentRequest {
+  id            String            @id @default(cuid())
+  type          String
+  status        String            @default("NEW")
+  productId     String?           @map("product_id")
+  product       EquipmentProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  customerName  String            @map("customer_name")
+  customerEmail String            @map("customer_email")
+  customerPhone String?           @map("customer_phone")
+  companyName   String?           @map("company_name")
+  eventDate     DateTime?         @map("event_date")
+  rentalDays    Int?              @map("rental_days")
+  quantity      Int               @default(1)
+  message       String?
+  adminNote     String?           @map("admin_note")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([productId])
+}
+
+// ============================================
+// БИРЖА ВЕДУЩИХ
+// ============================================
+
+model Booking {
+  id       String      @id @default(cuid())
+  hostId   String      @map("host_id")
+  host     HostProfile @relation(fields: [hostId], references: [id])
+  clientId String      @map("client_id")
+  client   User        @relation("Client", fields: [clientId], references: [id])
+
+  eventDate     DateTime @map("event_date")
+  durationHours Int      @map("duration_hours")
+  totalPrice    Float    @map("total_price")
+  status        String   @default("SEARCH") // SEARCH, OFFERED, CONFIRMED, PAID, COMPLETED, CANCELLED
+  comment       String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+}
+
+// ============================================
+// ИГРОВЫЕ СЕССИИ
+// ============================================
+
+model GameSession {
+  id     String @id @default(cuid())
+  quizId String @map("quiz_id")
+  quiz   Quiz   @relation(fields: [quizId], references: [id])
+  hostId String @map("host_id")
+  host   User   @relation("Host", fields: [hostId], references: [id])
+
+  pinCode              String  @unique @map("pin_code")
+  status               String  @default("LOBBY") // LOBBY, QUESTION, PAUSED, SHOW_ANSWER, LEADERBOARD, FINISHED
+  currentQuestionIndex Int     @default(0) @map("current_question_index")
+  currentRoundId       String? @map("current_round_id")
+
+  startedAt  DateTime? @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  players GamePlayer[]
+  teams   Team[]
+}
+
+model GamePlayer {
+  id        String      @id @default(cuid())
+  sessionId String      @map("session_id")
+  session   GameSession @relation(fields: [sessionId], references: [id])
+
+  userId         String? @map("user_id")
+  nickname       String
+  score          Int     @default(0)
+  correctAnswers Int     @default(0) @map("correct_answers")
+
+  connected Boolean @default(true)
+  socketId  String? @map("socket_id")
+  teamId    String? @map("team_id")
+  team      Team?   @relation(fields: [teamId], references: [id])
+
+  answers PlayerAnswer[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+}
+
+model PlayerAnswer {
+  id         String     @id @default(cuid())
+  playerId   String     @map("player_id")
+  player     GamePlayer @relation(fields: [playerId], references: [id])
+  questionId String     @map("question_id")
+
+  answerId       String? @map("answer_id")
+  answerText     String? @map("answer_text")
+  isCorrect      Boolean @default(false) @map("is_correct")
+  pointsAwarded  Int     @default(0) @map("points_awarded")
+  responseTimeMs Int     @map("response_time_ms")
+
+  createdAt DateTime @default(now()) @map("created_at")
+}
+
+model Team {
+  id        String      @id @default(cuid())
+  sessionId String      @map("session_id")
+  session   GameSession @relation(fields: [sessionId], references: [id])
+  name      String
+  captainId String?     @map("captain_id")
+  score     Int         @default(0)
+
+  players GamePlayer[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+}
+
+// ============================================
+// FLASHCARDS
+// ============================================
+
+model FlashcardSet {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  authorId    String  @map("author_id")
+  author      User    @relation(fields: [authorId], references: [id])
+
+  isPublished Boolean @default(false) @map("is_published")
+  price       Float   @default(0.0)
+
+  cards     Flashcard[]
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+}
+
+model Flashcard {
+  id    String       @id @default(cuid())
+  setId String       @map("set_id")
+  set   FlashcardSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  term       String
+  definition String
+  imageUrl   String? @map("image_url")
+  audioUrl   String? @map("audio_url")
+
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+}

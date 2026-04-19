@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio — Marketplace Admin</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body { padding: 24px; }
+        .page { max-width: 1100px; margin: 0 auto; }
+        .market-card { border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.035); padding: 16px; margin-bottom: 14px; }
+        .market-row, .market-actions { display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+        .status-box { display: none; padding: 12px 14px; border-radius: 12px; margin: 12px 0; }
+        .status-box.success { background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.25); }
+        .status-box.error { background: rgba(239,68,68,.14); border: 1px solid rgba(239,68,68,.25); }
+        .empty-state { padding: 24px; opacity: .72; }
+    </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
+</head>
+<body>
+<main class="page">
+    <div class="page-header">
+        <div>
+            <div class="page-kicker">Admin</div>
+            <h1>Marketplace Admin</h1>
+            <p class="text-secondary">Модерация квизов, ожидающих публикации.</p>
+        </div>
+        <a class="btn btn-outline" href="/">На главную</a>
+    </div>
+    <div id="marketStatus" class="status-box"></div>
+    <section id="pendingList" class="mt-4">
+        <div class="empty-state">Загрузка...</div>
+    </section>
+</main>
+<script src="/js/api.js"></script>
+<script src="/js/marketplace.js"></script>
+</body>
+</html>

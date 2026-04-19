@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio — Шаблон квиза</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body { padding: 24px; }
+        .quiz-view-page { max-width: 1180px; margin: 0 auto; }
+        .quiz-hero {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 28px;
+            align-items: stretch;
+        }
+        .quiz-cover-large {
+            min-height: 320px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(34,197,94,.22), rgba(14,165,233,.18));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .quiz-cover-large img { width: 100%; height: 100%; object-fit: cover; }
+        .cover-placeholder { font-weight: 800; font-size: 32px; opacity: .78; }
+        .catalog-meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 13px; opacity: .78; margin-bottom: 12px; }
+        .lead { font-size: 18px; line-height: 1.55; }
+        .quiz-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 18px; }
+        .question-preview {
+            padding: 14px;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,.035);
+        }
+        .status-box { display: none; padding: 12px 14px; border-radius: 12px; margin: 12px 0; }
+        .status-box.success { background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.25); }
+        .status-box.error { background: rgba(239,68,68,.14); border: 1px solid rgba(239,68,68,.25); }
+        .empty-state { padding: 24px; opacity: .72; }
+        @media (max-width: 900px) {
+            .quiz-hero { grid-template-columns: 1fr; }
+        }
+    </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
+</head>
+<body>
+<main class="quiz-view-page">
+    <div class="page-header">
+        <div>
+            <div class="page-kicker">Шаблон квиза</div>
+            <h1>Просмотр шаблона</h1>
+            <p class="text-secondary">Оцените структуру, формат и вопросы перед добавлением в свою библиотеку.</p>
+        </div>
+        <div class="d-flex gap-2">
+        <a class="btn btn-outline" href="/catalog.html">К каталогу</a>
+        <a class="btn btn-outline" href="/">На главную</a>
+        </div>
+    </div>
+    <div id="catalogStatus" class="status-box"></div>
+    <div id="quizViewRoot">
+        <div class="card empty-state">Загрузка шаблона...</div>
+    </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/catalog.js"></script>
+</body>
+</html>

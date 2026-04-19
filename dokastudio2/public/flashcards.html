@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio — Карточки</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .flashcard-container {
+            perspective: 1000px;
+            width: 100%;
+            max-width: 500px;
+            height: 300px;
+            margin: 20px auto;
+            cursor: pointer;
+        }
+        .flashcard {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            font-size: 1.5rem;
+        }
+        .flashcard-front {
+            background: var(--bg-card);
+            border: 2px solid var(--border-light);
+        }
+        .flashcard-back {
+            background: var(--primary);
+            color: white;
+            transform: rotateY(180deg);
+        }
+        .cards-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .card-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+        .study-modes {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+    </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
+</head>
+<body>
+    <div class="container">
+        <div id="app-navigation"></div>
+        <div id="authSection" class="card" style="max-width: 400px; margin: 60px auto;">
+            <h2>Вход</h2>
+            <div class="form-group"><input type="email" class="input" id="loginEmail" placeholder="Email" value="test@test.com"></div>
+            <div class="form-group"><input type="password" class="input" id="loginPassword" placeholder="Пароль" value="123456"></div>
+            <button class="btn btn-primary w-full" onclick="login()">Войти</button>
+        </div>
+
+        <div id="appSection" style="display: none;">
+            <header class="page-header">
+                <div>
+                    <div class="page-kicker">Карточки</div>
+                    <h1>Флэш-карточки</h1>
+                    <p class="text-secondary">Создавайте наборы, тренируйте термины и превращайте материалы в тесты.</p>
+                </div>
+            </header>
+            <div class="action-bar">
+                <button class="btn btn-primary" onclick="showCreateSetModal()">📇 Новый набор</button>
+                <button class="btn btn-outline" onclick="loadMySets()">📂 Мои наборы</button>
+                <select class="input" id="setSelect" onchange="loadSet(this.value)" style="width: auto; min-width: 200px;">
+                    <option value="">-- Выберите набор --</option>
+                </select>
+            </div>
+
+            <div id="setInfo" style="display: none;">
+                <h2 id="setTitle"></h2>
+                <p id="setDesc" class="text-secondary"></p>
+                
+                <div class="study-modes">
+                    <button class="btn btn-outline" onclick="startFlashcards()">🔄 Карточки</button>
+                    <button class="btn btn-outline" onclick="startMatching()">🎯 Подбор пар</button>
+                    <button class="btn btn-primary" onclick="generateQuiz()">📝 Создать тест</button>
+                </div>
+
+                <div id="flashcardStudyMode" style="display: none;">
+                    <div class="flashcard-container" onclick="flipCard()">
+                        <div class="flashcard" id="studyFlashcard">
+                            <div class="flashcard-front" id="cardFront">Термин</div>
+                            <div class="flashcard-back" id="cardBack">Определение</div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-between mt-3">
+                        <button class="btn btn-outline" onclick="prevCard()">← Назад</button>
+                        <span id="cardCounter">1 / 10</span>
+                        <button class="btn btn-outline" onclick="nextCard()">Вперёд →</button>
+                    </div>
+                </div>
+
+                <div id="matchingMode" style="display: none;">
+                    <div class="grid-2" id="matchingGrid"></div>
+                    <div id="matchingResult" class="mt-3"></div>
+                </div>
+
+                <h3 class="mt-4">Карточки в наборе</h3>
+                <button class="btn btn-outline btn-sm" onclick="showAddCardModal()">➕ Добавить карточку</button>
+                <div class="cards-list" id="cardsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалки -->
+    <div class="preview-modal" id="createSetModal">
+        <div class="preview-content">
+            <h2>Новый набор карточек</h2>
+            <div class="form-group"><input type="text" class="input" id="newSetTitle" placeholder="Название"></div>
+            <div class="form-group"><textarea class="input" id="newSetDesc" placeholder="Описание"></textarea></div>
+            <button class="btn btn-primary" onclick="createSet()">Создать</button>
+            <button class="btn btn-outline" onclick="closeModal('createSetModal')">Отмена</button>
+        </div>
+    </div>
+
+    <div class="preview-modal" id="addCardModal">
+        <div class="preview-content">
+            <h2>Новая карточка</h2>
+            <div class="form-group"><input type="text" class="input" id="cardTerm" placeholder="Термин (вопрос)"></div>
+            <div class="form-group"><textarea class="input" id="cardDef" placeholder="Определение (ответ)"></textarea></div>
+            <button class="btn btn-primary" onclick="addCard()">Добавить</button>
+            <button class="btn btn-outline" onclick="closeModal('addCardModal')">Отмена</button>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/components/nav.js"></script>
+    <script>
+        let currentSet = null;
+        let cards = [];
+        let studyIndex = 0;
+
+        async function init() {
+    // Рендерим навигацию
+    Navigation.render('app-navigation', { currentPage: 'flashcards' });
+    
+    if (getToken()) {
+        const isAuth = await checkAuth();
+        if (isAuth) {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('appSection').style.display = 'block';
+            Navigation.updateUser(currentUser.name, currentUser.name.charAt(0).toUpperCase());
+            await loadMySets();
+        }
+    }
+}
+
+        async function loadMySets() {
+            const res = await fetch('/api/flashcards', { headers: getHeaders() });
+            const data = await res.json();
+            const select = document.getElementById('setSelect');
+            select.innerHTML = '<option value="">-- Выберите набор --</option>' +
+                data.sets.map(s => `<option value="${s.id}">${s.title} (${s._count.cards} карт.)</option>`).join('');
+        }
+
+        async function loadSet(id) {
+            if (!id) return;
+            const res = await fetch(`/api/flashcards/${id}`, { headers: getHeaders() });
+            const data = await res.json();
+            currentSet = data.set;
+            cards = data.set.cards || [];
+            
+            document.getElementById('setInfo').style.display = 'block';
+            document.getElementById('setTitle').textContent = currentSet.title;
+            document.getElementById('setDesc').textContent = currentSet.description || '';
+            
+            renderCardsList();
+        }
+
+        function renderCardsList() {
+            const container = document.getElementById('cardsList');
+            container.innerHTML = cards.map(c => `
+                <div class="card-item">
+                    <strong>${escapeHtml(c.term)}</strong>
+                    <p class="text-secondary">${escapeHtml(c.definition)}</p>
+                </div>
+            `).join('');
+        }
+
+        async function createSet() {
+            const title = document.getElementById('newSetTitle').value;
+            const desc = document.getElementById('newSetDesc').value;
+            const res = await fetch('/api/flashcards', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ title, description: desc })
+            });
+            const data = await res.json();
+            if (data.set) {
+                closeModal('createSetModal');
+                loadMySets();
+                loadSet(data.set.id);
+            }
+        }
+
+        async function addCard() {
+            const term = document.getElementById('cardTerm').value;
+            const def = document.getElementById('cardDef').value;
+            await fetch(`/api/flashcards/${currentSet.id}/cards`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ term, definition: def, order: cards.length })
+            });
+            closeModal('addCardModal');
+            loadSet(currentSet.id);
+        }
+
+        function startFlashcards() {
+            document.getElementById('flashcardStudyMode').style.display = 'block';
+            document.getElementById('matchingMode').style.display = 'none';
+            studyIndex = 0;
+            updateFlashcard();
+        }
+
+        function updateFlashcard() {
+            const card = cards[studyIndex];
+            document.getElementById('cardFront').textContent = card.term;
+            document.getElementById('cardBack').textContent = card.definition;
+            document.getElementById('cardCounter').textContent = `${studyIndex + 1} / ${cards.length}`;
+            document.getElementById('studyFlashcard').classList.remove('flipped');
+        }
+
+        function flipCard() {
+            document.getElementById('studyFlashcard').classList.toggle('flipped');
+        }
+
+        function prevCard() {
+            studyIndex = (studyIndex - 1 + cards.length) % cards.length;
+            updateFlashcard();
+        }
+
+        function nextCard() {
+            studyIndex = (studyIndex + 1) % cards.length;
+            updateFlashcard();
+        }
+
+        function startMatching() {
+            document.getElementById('flashcardStudyMode').style.display = 'none';
+            document.getElementById('matchingMode').style.display = 'block';
+            
+            // Простая реализация подбора пар
+            const shuffled = [...cards].sort(() => Math.random() - 0.5);
+            const grid = document.getElementById('matchingGrid');
+            grid.innerHTML = shuffled.map(c => `
+                <div class="card-item" draggable="true">${c.term}</div>
+                <div class="card-item" draggable="true">${c.definition}</div>
+            `).join('');
+        }
+
+        async function generateQuiz() {
+            const res = await fetch(`/api/flashcards/${currentSet.id}/generate-quiz`, {
+                headers: getHeaders()
+            });
+            const data = await res.json();
+            if (data.quiz) {
+                window.location.href = `/constructor.html?quiz=${data.quiz.id}`;
+            }
+        }
+
+        function showCreateSetModal() { document.getElementById('createSetModal').classList.add('active'); }
+        function showAddCardModal() { document.getElementById('addCardModal').classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        window.login = login;
+        window.logout = logout;
+        window.loadMySets = loadMySets;
+        window.loadSet = loadSet;
+        window.createSet = createSet;
+        window.addCard = addCard;
+        window.startFlashcards = startFlashcards;
+        window.flipCard = flipCard;
+        window.prevCard = prevCard;
+        window.nextCard = nextCard;
+        window.startMatching = startMatching;
+        window.generateQuiz = generateQuiz;
+        window.showCreateSetModal = showCreateSetModal;
+        window.showAddCardModal = showAddCardModal;
+        window.closeModal = closeModal;
+
+        init();
+    </script>
+</body>
+</html>

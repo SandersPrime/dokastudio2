@@ -1,0 +1,940 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio - Конструктор квизов</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;600;700;800&family=Oswald:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Poppins:wght@400;500;600;700;800&family=Roboto+Slab:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="/css/style.css?v=20260417a">
+    <link rel="stylesheet" href="/css/ui-modernization.css?v=20260417a">
+    <link rel="stylesheet" href="/css/constructor.css?v=20260418outcome">
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body class="constructor-page constructor-has-launcher">
+    <div class="constructor-shell">
+        <div id="app-navigation"></div>
+
+        <div class="card" id="authSection" style="max-width: 480px; margin: 60px auto;">
+            <h2>Вход или регистрация</h2>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="input" id="loginEmail" value="test@test.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Пароль</label>
+                <input type="password" class="input" id="loginPassword" value="123456">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Имя (для регистрации)</label>
+                <input type="text" class="input" id="loginName" placeholder="Ваше имя">
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" onclick="handleLogin()">Войти</button>
+                <button class="btn btn-outline" onclick="handleRegister()">Регистрация</button>
+            </div>
+        </div>
+
+        <div id="appSection" style="display:none;">
+            <section class="constructor-top-actions quiz-actions-panel" hidden>
+                <button class="btn btn-primary btn-sm" onclick="showCreateQuizModal()">Новый квиз</button>
+                <button class="btn btn-outline btn-sm" onclick="loadMyQuizzes()">Выбрать квиз</button>
+                <button class="btn btn-outline btn-sm" onclick="previewQuiz()" data-requires-quiz="true" disabled>Предпросмотр</button>
+                <button class="btn btn-outline btn-sm" onclick="publishQuiz()" data-requires-quiz="true" disabled>Опубликовать</button>
+                <button class="btn btn-outline btn-sm" onclick="exportQuiz()" data-requires-quiz="true" disabled>Экспорт</button>
+            </section>
+
+            <header class="constructor-header" hidden>
+                <div class="constructor-heading">
+                    <div class="page-kicker">Конструктор</div>
+                    <div class="constructor-title-row">
+                        <h1 id="constructorPageTitle">Рабочее пространство автора</h1>
+                        <button
+                            type="button"
+                            class="quiz-meta-edit-btn"
+                            onclick="openCurrentQuizSettings()"
+                            data-requires-quiz="true"
+                            disabled
+                            aria-label="Редактировать название и описание квиза"
+                            title="Редактировать квиз"
+                        >✎</button>
+                    </div>
+                    <p id="constructorPageDescription">Выберите или создайте квиз, чтобы начать сборку сценария.</p>
+                </div>
+                <div class="constructor-header-actions">
+                    <button
+                        type="button"
+                        class="btn btn-outline btn-sm constructor-back-btn"
+                        id="backToStartScreenBtn"
+                        onclick="returnToStartScenario()"
+                        hidden
+                    >← К выбору сценария</button>
+                    <div class="save-status" id="saveStatus" aria-live="polite">Готов к работе</div>
+                </div>
+            </header>
+
+            <section class="constructor-start-screen" id="constructorStartScreen">
+                <div class="start-hero">
+                    <div>
+                        <div class="page-kicker">Начало работы</div>
+                        <h2>Выберите сценарий запуска</h2>
+                        <p>Создайте игру с нуля, начните со сценария, купите готовый продукт или поручите задачу DokaLab.</p>
+                    </div>
+                </div>
+
+                <div class="start-options-grid" aria-label="Варианты старта">
+                    <button type="button" class="start-option-card" onclick="startBlankQuiz()">
+                        <span class="start-option-icon">＋</span>
+                        <span class="start-option-title">Создать самому</span>
+                        <span class="start-option-desc">Открыть пустой редактор и собрать игру полностью самостоятельно.</span>
+                        <span class="start-option-action">Открыть пустой конструктор</span>
+                    </button>
+
+                    <button type="button" class="start-option-card" onclick="openTemplateLibrary()">
+                        <span class="start-option-icon">▦</span>
+                        <span class="start-option-title">Выбрать из шаблонов</span>
+                        <span class="start-option-desc">Выберите готовый игровой шаблон и адаптируйте его под себя.</span>
+                        <span class="start-option-action">Перейти в библиотеку</span>
+                    </button>
+
+                    <button type="button" class="start-option-card" onclick="openMarketplaceStart()">
+                        <span class="start-option-icon">★</span>
+                        <span class="start-option-title">Купить готовую игру</span>
+                        <span class="start-option-desc">Перейти в маркетплейс и выбрать профессиональную игру.</span>
+                        <span class="start-option-action">Открыть маркетплейс</span>
+                    </button>
+
+                    <button type="button" class="start-option-card" onclick="openDokaLabScreen()">
+                        <span class="start-option-icon">DL</span>
+                        <span class="start-option-title">Заказать в DokaLab</span>
+                        <span class="start-option-desc">Передайте задачу команде DokaLab и получите игру под ваш формат, аудиторию и цели.</span>
+                        <span class="start-option-action">Открыть DokaLab</span>
+                    </button>
+                </div>
+
+                <section class="popular-templates">
+                    <div class="popular-templates-head">
+                        <div>
+                            <div class="page-kicker">Популярные шаблоны</div>
+                            <h3>Быстрый старт для частых форматов</h3>
+                        </div>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="openTemplateLibrary()">Открыть библиотеку</button>
+                    </div>
+
+                    <div class="popular-template-grid">
+                        <button type="button" class="popular-template-card" onclick="openTemplateLibrary()">
+                            <span class="template-tag">Квиз</span>
+                            <strong>Классическая викторина</strong>
+                            <span>Раунды с вопросами, очками и финальным рейтингом.</span>
+                        </button>
+                        <button type="button" class="popular-template-card" onclick="openTemplateLibrary()">
+                            <span class="template-tag">Команды</span>
+                            <strong>Командный баттл</strong>
+                            <span>Сценарий для командной игры с быстрыми раундами.</span>
+                        </button>
+                        <button type="button" class="popular-template-card" onclick="openTemplateLibrary()">
+                            <span class="template-tag">Обучение</span>
+                            <strong>Проверка знаний</strong>
+                            <span>Структура для урока, тренинга или корпоративной сессии.</span>
+                        </button>
+                    </div>
+                </section>
+            </section>
+
+            <div class="constructor-workspace" id="constructorWorkspace" hidden>
+            <section class="appearance-toolbar-v2" id="constructorToolbar" aria-label="Оформление текущего слайда">
+                <div class="toolbar-row">
+                    <div class="toolbar-group toolbar-group--text">
+                        <div class="toolbar-group-head">
+                            <div class="toolbar-group-title">Текст</div>
+                            <div class="toolbar-segment-control" role="tablist" aria-label="Что настраивать">
+                                <button type="button" class="toolbar-segment-btn is-active" id="textTargetQuestion" data-text-target="question" role="tab" aria-selected="true">Вопрос</button>
+                                <button type="button" class="toolbar-segment-btn" id="textTargetAnswer" data-text-target="answer" role="tab" aria-selected="false">Ответы</button>
+                            </div>
+                        </div>
+
+                        <div class="toolbar-control-line">
+                            <select class="toolbar-select toolbar-font" id="textFont" aria-label="Шрифт текста">
+                                <option value="'Inter', sans-serif">Inter</option>
+                                <option value="'Manrope', sans-serif">Manrope</option>
+                                <option value="'Montserrat', sans-serif">Montserrat</option>
+                                <option value="'Poppins', sans-serif">Poppins</option>
+                                <option value="'Nunito Sans', sans-serif">Nunito Sans</option>
+                                <option value="'Oswald', sans-serif">Oswald</option>
+                                <option value="'Roboto Slab', serif">Roboto Slab</option>
+                                <option value="'Playfair Display', serif">Playfair Display</option>
+                            </select>
+
+                            <input type="number" class="toolbar-input toolbar-size" id="textSize" min="12" max="96" step="1" value="48" aria-label="Размер текста">
+                            <input type="color" class="toolbar-color" id="textColor" value="#111827" aria-label="Цвет текста">
+                        </div>
+
+                        <div class="toolbar-control-line">
+                            <div class="toolbar-toggle-group" aria-label="Начертание текста">
+                                <button type="button" class="toolbar-btn" data-text-toggle="bold" title="Жирный"><strong>B</strong></button>
+                                <button type="button" class="toolbar-btn" data-text-toggle="italic" title="Курсив"><em>I</em></button>
+                                <button type="button" class="toolbar-btn" data-text-toggle="underline" title="Подчёркивание"><u>U</u></button>
+                            </div>
+
+                            <div class="toolbar-toggle-group align-segment" aria-label="Выравнивание текста">
+                                <button type="button" class="toolbar-btn align-left" data-text-align="left" title="По левому краю"></button>
+                                <button type="button" class="toolbar-btn align-center" data-text-align="center" title="По центру"></button>
+                                <button type="button" class="toolbar-btn align-right" data-text-align="right" title="По правому краю"></button>
+                            </div>
+
+                            <input type="hidden" id="activeTextTarget" value="question">
+                            <input type="hidden" id="questionFont" value="'Inter', sans-serif">
+                            <input type="hidden" id="answerFont" value="'Inter', sans-serif">
+                            <input type="hidden" id="questionSize" value="48">
+                            <input type="hidden" id="answerSize" value="18">
+                            <input type="hidden" id="questionColor" value="#111827">
+                            <input type="hidden" id="answerColor" value="#111827">
+                            <input type="hidden" id="questionBold" value="false">
+                            <input type="hidden" id="questionItalic" value="false">
+                            <input type="hidden" id="questionUnderline" value="false">
+                            <input type="hidden" id="questionAlign" value="left">
+                            <input type="hidden" id="answerBold" value="false">
+                            <input type="hidden" id="answerItalic" value="false">
+                            <input type="hidden" id="answerUnderline" value="false">
+                            <input type="hidden" id="answerAlign" value="left">
+                            <input type="hidden" id="textAlign" value="left">
+                        </div>
+                    </div>
+
+                    <div class="toolbar-group toolbar-group--surface">
+                        <div class="toolbar-group-title">Плашки</div>
+
+                        <div class="toolbar-control-line">
+                            <label class="toolbar-field">
+                                <span class="toolbar-label">Фон</span>
+                                <input type="color" class="toolbar-color" id="answerCardColor" value="#ffffff" aria-label="Цвет фона плашек">
+                            </label>
+
+                            <label class="toolbar-field">
+                                <span class="toolbar-label">Акцент</span>
+                                <input type="color" class="toolbar-color" id="answerAccentColor" value="#6a4fff" aria-label="Цвет акцента плашек">
+                            </label>
+
+                            <label class="toolbar-field toolbar-field--wide">
+                                <span class="toolbar-label">Стиль</span>
+                                <select class="toolbar-select" id="answerCardStyle" aria-label="Стиль плашек">
+                                    <option value="square">Прямые</option>
+                                    <option value="rounded">Скруглённые</option>
+                                    <option value="soft">Мягкие</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div class="toolbar-control-line toolbar-control-line--ranges">
+                            <label class="toolbar-range-field">
+                                <span class="toolbar-label">Борт</span>
+                                <input type="range" class="toolbar-range" id="answerBorderWeight" min="0" max="6" value="1">
+                            </label>
+
+                            <label class="toolbar-range-field">
+                                <span class="toolbar-label">Отступ</span>
+                                <input type="range" class="toolbar-range" id="answerGap" min="4" max="28" value="12">
+                            </label>
+
+                            <label class="toolbar-range-field">
+                                <span class="toolbar-label">Прозр.</span>
+                                <input type="range" class="toolbar-range" id="answerCardOpacity" min="20" max="100" value="92">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="toolbar-group toolbar-group--background">
+                        <div class="toolbar-group-title">Фон</div>
+
+                        <div class="toolbar-control-line toolbar-bg-main">
+                            <select class="toolbar-select" id="backgroundType" aria-label="Тип фона">
+                                <option value="color">Цвет</option>
+                                <option value="gradient">Градиент</option>
+                                <option value="image">Картинка</option>
+                                <option value="video">Видео</option>
+                            </select>
+
+                            <div class="bg-type-panel" data-bg-type="color">
+                                <input type="color" class="toolbar-color" id="backgroundColor" value="#f6f8fb" aria-label="Цвет фона">
+                            </div>
+
+                            <div class="bg-type-panel" data-bg-type="gradient" hidden>
+                                <input type="color" class="toolbar-color" id="backgroundGradientStart" value="#f6f8fb" aria-label="Первый цвет градиента">
+                                <input type="color" class="toolbar-color" id="backgroundGradientEnd" value="#dfe7ff" aria-label="Второй цвет градиента">
+                                <select class="toolbar-select toolbar-select--sm" id="backgroundGradientDirection" aria-label="Направление градиента">
+                                    <option value="90deg">Слева направо</option>
+                                    <option value="180deg">Сверху вниз</option>
+                                    <option value="135deg">135°</option>
+                                    <option value="45deg">45°</option>
+                                </select>
+                            </div>
+
+                            <div class="bg-type-panel" data-bg-type="image" hidden>
+                                <button type="button" class="toolbar-action-btn" id="pickBackgroundImageBtn">Картинка</button>
+                                <input type="hidden" id="backgroundImageUrl" value="">
+                                <select class="toolbar-select toolbar-select--sm" id="backgroundImageFit" aria-label="Режим картинки">
+                                    <option value="cover">Cover</option>
+                                    <option value="contain">Fit</option>
+                                    <option value="100% 100%">Fill</option>
+                                </select>
+                            </div>
+
+                            <div class="bg-type-panel" data-bg-type="video" hidden>
+                                <button type="button" class="toolbar-action-btn" id="pickBackgroundVideoBtn">Видео</button>
+                                <input type="hidden" id="backgroundVideoUrl" value="">
+                                <label class="toolbar-check"><input type="checkbox" id="backgroundVideoMuted" checked><span>muted</span></label>
+                                <label class="toolbar-check"><input type="checkbox" id="backgroundVideoLoop" checked><span>loop</span></label>
+                            </div>
+                        </div>
+
+                        <div class="toolbar-control-line toolbar-bg-overlay">
+                            <label class="toolbar-range-field toolbar-range-field--wide">
+                                <span class="toolbar-label">Overlay</span>
+                                <input type="range" class="toolbar-range" id="backgroundOverlayOpacity" min="0" max="80" value="0">
+                            </label>
+
+                            <input type="color" class="toolbar-color" id="backgroundOverlayColor" value="#000000" aria-label="Цвет overlay">
+                        </div>
+
+                        <input type="hidden" id="backgroundGradient" value="">
+                        <input type="file" id="backgroundImageFile" accept="image/*" hidden>
+                        <input type="file" id="backgroundVideoFile" accept="video/*" hidden>
+                    </div>
+
+                    <div class="toolbar-group toolbar-group--layout">
+                        <div class="toolbar-group-title">Макет</div>
+
+                        <div class="toolbar-control-line toolbar-control-line--stack">
+                            <select class="toolbar-select" id="answerLayout" aria-label="Макет ответов">
+                                <option value="grid-2">2 колонки</option>
+                                <option value="one-column">1 колонка</option>
+                                <option value="question-focus">Акцент на вопрос</option>
+                                <option value="media-left">Медиа слева</option>
+                                <option value="media-right">Медиа справа</option>
+                            </select>
+
+                            <select class="toolbar-select" id="contentAlign" aria-label="Горизонтальное выравнивание">
+                                <option value="center">По центру</option>
+                                <option value="start">Слева</option>
+                                <option value="stretch">По ширине</option>
+                            </select>
+
+                            <select class="toolbar-select" id="contentVertical" aria-label="Вертикальное выравнивание">
+                                <option value="center">По центру</option>
+                                <option value="start">Сверху</option>
+                                <option value="end">Снизу</option>
+                            </select>
+
+                            <input type="hidden" id="questionTemplate" value="classic">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importQuiz(event)">
+
+            <div class="constructor-layout-v2">
+                <aside class="left-column">
+                    <section class="outline-panel">
+                        <div class="outline-header">
+                            <div class="outline-title-block">
+                                <div class="page-kicker">Структура</div>
+                                <h3>Слайды квиза</h3>
+                                <div class="outline-hidden-meta" aria-hidden="true">
+                                    <span id="currentQuizTitle">Квиз не выбран</span>
+                                    <span id="currentQuizDesc"></span>
+                                </div>
+                            </div>
+                            <div class="outline-controls">
+                                <label class="autosave-toggle-wrap" title="Автосохранение порядка после перетаскивания">
+                                    <span class="autosave-toggle-label">Автосохранение</span>
+                                    <input type="checkbox" id="autoSaveOrderToggle" data-requires-quiz="true" disabled>
+                                    <span class="autosave-toggle-slider" aria-hidden="true"></span>
+                                </label>
+                            </div>
+                            <div class="outline-editor-actions">
+                                <button class="btn btn-primary btn-sm" onclick="saveCurrentQuestion()" data-requires-question="true" disabled>Сохранить</button>
+                                <button class="btn btn-outline btn-sm" onclick="deleteCurrentQuestion()" data-requires-question="true" disabled>Удалить</button>
+                            </div>
+                        </div>
+
+                        <div class="questions-list" id="questionsList">
+                            <div class="empty-state">Нет элементов</div>
+                        </div>
+                    </section>
+                </aside>
+
+                <main class="center-column studio-preview-panel" id="questionEditor">
+                    <div class="editor-placeholder" id="editorPlaceholder">
+                        <p>Выберите элемент в структуре или добавьте новый, чтобы начать редактирование.</p>
+                    </div>
+
+                    <div id="editorContent" class="studio-editor-content" style="display:none;">
+                        <div class="studio-canvas-toolbar">
+                            <div>
+                                <div class="page-kicker" id="previewModeLabel">Элемент</div>
+                                <h3 id="previewElementTitle">Рабочее полотно</h3>
+                            </div>
+                        </div>
+
+                        <section class="slide-canvas" id="slideCanvas">
+                            <div class="slide-media-layer" id="previewMediaLayer"></div>
+                            <div class="slide-content-layer">
+                                <div class="slide-mode-pill" id="previewTypeBadge">Все отвечают</div>
+                                <div class="slide-subtitle" id="previewSubtitle" contenteditable="true" data-placeholder="Подзаголовок" oninput="updatePreviewField('questionSubtitle', this.textContent)"></div>
+                                <h2 id="previewQuestionText" contenteditable="true" data-placeholder="Введите текст вопроса" oninput="updatePreviewField('questionText', this.textContent)">Введите текст вопроса</h2>
+                                <div id="previewSpecialLayout"></div>
+                                <div class="preview-answers-grid" id="previewAnswersGrid"></div>
+                            </div>
+                            <div class="slide-footer">
+                                <span id="previewTimer">30 сек</span>
+                                <span id="previewPoints">100 очков</span>
+                            </div>
+                        </section>
+                    </div>
+                </main>
+
+                <aside class="right-column logic-panel" id="logicPanel">
+                    <div class="panel-header">
+                        <div class="page-kicker">Логика</div>
+                        <h3>Поведение текущего слайда</h3>
+                    </div>
+
+                    <section class="panel-section">
+                        <h4>Тип слайда</h4>
+                        <select class="input" id="slideTypeSelect" onchange="setSlideType(this.value)">
+                            <option value="QUESTION">Вопрос</option>
+                            <option value="INFO_SLIDE">Информационный слайд</option>
+                            <option value="MILLIONAIRE_INTRO">Начало раунда «Миллионер»</option>
+                            <option value="JEOPARDY_ROUND">Раунд «Своя игра»</option>
+                            <option value="FAMILY100_ROUND">Раунд «100 к 1»</option>
+                        </select>
+                    </section>
+
+                    <section class="panel-section logic-section" id="questionLogicSection">
+                        <h4>Режим ответа</h4>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Тип ответа</label>
+                                <select class="input" id="answerModeSelect" onchange="setAnswerMode(this.value)">
+                                    <option value="EVERYONE_ANSWERS">Отвечают все</option>
+                                    <option value="FASTEST_FINGER">Отвечает самый быстрый</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Медиа-тип</label>
+                                <select class="input" id="mediaTypeSelect" onchange="setMediaType(this.value)">
+                                    <option value="TEXT">Текстовый вопрос</option>
+                                    <option value="IMAGE">Вопрос с изображением</option>
+                                    <option value="AUDIO">Вопрос с аудио</option>
+                                    <option value="VIDEO">Вопрос с видео</option>
+                                    <option value="TRUE_FALSE">Правда / Ложь</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="hidden-compat-fields">
+                            <input type="hidden" id="questionTypeSelect" value="EVERYONE_ANSWERS">
+                            <input type="hidden" id="questionText" value="">
+                            <input type="hidden" id="questionSubtitle" value="">
+                        </div>
+                        <div id="answersSection"></div>
+                        <div id="trueFalseSection"></div>
+                    </section>
+
+                    <section class="panel-section logic-section" id="infoLogicSection">
+                        <h4>Информационный слайд</h4>
+                        <div class="form-group">
+                            <label class="form-label">Заголовок</label>
+                            <input class="input" id="infoTitleInput" placeholder="Заголовок слайда" oninput="updateInfoFields()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Текст</label>
+                            <textarea class="input" id="infoTextInput" rows="3" placeholder="Текст информационного слайда" oninput="updateInfoFields()"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Поведение показа</label>
+                            <select class="input" id="infoDisplayMode" onchange="syncPreviewFromProperties()">
+                                <option value="manual">Переключает ведущий</option>
+                                <option value="auto">Автопереход по таймеру</option>
+                            </select>
+                        </div>
+                    </section>
+
+                    <section class="panel-section logic-section" id="mediaCommonSection">
+                        <h4>Медиа</h4>
+                        <div id="mediaUploadSection"></div>
+                    </section>
+
+                    <section class="panel-section logic-section" id="scoringSection">
+                        <h4>Очки</h4>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Очки</label>
+                                <input type="number" class="input" id="questionPoints" value="100" min="0" oninput="syncPreviewFromProperties()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Штраф</label>
+                                <input type="number" class="input" id="penaltyPoints" value="0" min="0" oninput="syncPreviewFromProperties()">
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Очки в начале</label>
+                                <input type="number" class="input" id="pointsAtStart" value="100" min="0" oninput="syncPreviewFromProperties()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Очки в конце</label>
+                                <input type="number" class="input" id="pointsAtEnd" value="100" min="0" oninput="syncPreviewFromProperties()">
+                            </div>
+                        </div>
+                        <input type="hidden" id="penaltyNoAnswer" value="0">
+                    </section>
+
+                    <section class="panel-section logic-section" id="timingSection">
+                        <h4>Таймер</h4>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Время (сек)</label>
+                                <input type="number" class="input" id="questionTime" value="30" min="0" oninput="syncPreviewFromProperties()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Режим таймера</label>
+                                <select class="input" id="countdownMode" onchange="syncPreviewFromProperties()">
+                                    <option value="auto">Автоматический</option>
+                                    <option value="manual">Ручной</option>
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="panel-section logic-section" id="advancedSection">
+                        <h4>Судейство и показ</h4>
+                        <div class="content-stack gap-1">
+                            <label class="form-checkbox"><input type="checkbox" id="autoJudge" checked onchange="syncPreviewFromProperties()"> Автоматическое судейство</label>
+                            <label class="form-checkbox"><input type="checkbox" id="lockoutOnWrong" checked onchange="syncPreviewFromProperties()"> Блокировка после ошибки</label>
+                            <label class="form-checkbox"><input type="checkbox" id="showCorrectAnswer" checked onchange="syncPreviewFromProperties()"> Показывать правильный ответ</label>
+                            <label class="form-checkbox"><input type="checkbox" id="jokersEnabled" checked onchange="syncPreviewFromProperties()"> Подсказки разрешены</label>
+                        </div>
+                        <div class="grid-2 mt-2">
+                            <input type="number" class="input" id="speedBonus1" placeholder="Бонус 1" value="0" min="0" oninput="syncPreviewFromProperties()">
+                            <input type="number" class="input" id="speedBonus2" placeholder="Бонус 2" value="0" min="0" oninput="syncPreviewFromProperties()">
+                        </div>
+                        <div class="grid-2 mt-2">
+                            <input type="number" class="input" id="speedBonus3" placeholder="Бонус 3" value="0" min="0" oninput="syncPreviewFromProperties()">
+                            <select class="input" id="textReveal" onchange="syncPreviewFromProperties()">
+                                <option value="none">Без анимации</option>
+                                <option value="letter">По буквам</option>
+                                <option value="word">По словам</option>
+                            </select>
+                        </div>
+                    </section>
+
+                    <section class="panel-section logic-section" id="hostNotesSection">
+                        <h4>Заметки ведущего</h4>
+                        <textarea class="input" id="questionNotes" rows="3" placeholder="Подсказки и комментарии" oninput="syncPreviewFromProperties()"></textarea>
+                        <div class="grid-2 mt-2">
+                            <input type="text" class="input" id="demographicGroup" placeholder="Группа" oninput="syncPreviewFromProperties()">
+                            <input type="text" class="input" id="slideRouting" placeholder="Переход к слайду" oninput="syncPreviewFromProperties()">
+                        </div>
+                    </section>
+                </aside>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalsContainer"></div>
+    <section class="template-library-screen" id="templateLibraryScreen" hidden>
+        <header class="template-library-hero">
+            <div class="template-hero-main">
+                <span class="template-library-kicker">Библиотека шаблонов</span>
+                <h2>Выберите основу игры и запустите квиз быстрее</h2>
+                <p>Готовые сценарии с настроенной логикой, структурой раундов и базовыми вопросами — адаптируйте под свою аудиторию за считанные минуты.</p>
+                <div class="template-hero-chips">
+                    <span class="template-hero-chip">15+ готовых сценариев</span>
+                    <span class="template-hero-chip">Шаблоны под школы и корпораты</span>
+                    <span class="template-hero-chip">Редактируйте без ограничений</span>
+                </div>
+            </div>
+            <div class="template-library-actions">
+                <button class="btn btn-outline" type="button" onclick="closeTemplateLibraryScreen()">Вернуться в конструктор</button>
+            </div>
+        </header>
+        <div class="template-library-pitch">
+            <article class="template-pitch-card">
+                <h3>Механика уже готова</h3>
+                <p>Структура, типы вопросов и настройки игры собраны в шаблоне — просто замените контент.</p>
+            </article>
+            <article class="template-pitch-card">
+                <h3>Под разные аудитории</h3>
+                <p>Выбирайте форматы для уроков, вечеринок или корпоративных встреч — всё уже проверено.</p>
+            </article>
+            <article class="template-pitch-card">
+                <h3>Быстрый запуск</h3>
+                <p>Сразу переходите в редактор и доводите игру до запуска за 15–20 минут.</p>
+            </article>
+        </div>
+        <section class="template-library-section">
+            <div class="template-section-head">
+                <div>
+                    <span class="template-section-kicker">Рекомендуем</span>
+                    <h3>Лучшие сценарии для старта</h3>
+                    <p>Самые востребованные форматы, с которых удобно начинать новую игру.</p>
+                </div>
+            </div>
+            <div class="template-section-grid" id="templateLibraryRecommendations"></div>
+        </section>
+        <section class="template-library-section">
+            <div class="template-section-head">
+                <div>
+                    <span class="template-section-kicker">Быстрый старт</span>
+                    <h3>Соберите квиз за 15 минут</h3>
+                    <p>Короткие сценарии, чтобы быстро запустить игру на вечеринке, уроке или встрече.</p>
+                </div>
+            </div>
+            <div class="template-section-grid" id="templateLibraryQuickStart"></div>
+        </section>
+        <div class="template-library-controls">
+            <div class="template-library-search">
+                <span class="template-search-icon" aria-hidden="true">🔍</span>
+                <input class="input" type="search" id="templateLibrarySearch" placeholder="Поиск по названию, формату или аудитории">
+            </div>
+            <div class="template-library-filters">
+                <div class="template-filter-group">
+                    <span class="template-filter-label">Коллекции</span>
+                    <div class="template-filter-chips" id="templateLibraryCollectionFilters"></div>
+                </div>
+                <div class="template-filter-group">
+                    <span class="template-filter-label">Цель</span>
+                    <div class="template-filter-chips" id="templateLibraryGoalFilters"></div>
+                </div>
+                <div class="template-filter-group">
+                    <span class="template-filter-label">Формат</span>
+                    <div class="template-filter-chips" id="templateLibraryFormatFilters"></div>
+                </div>
+                <div class="template-filter-group">
+                    <span class="template-filter-label">Длительность</span>
+                    <div class="template-filter-chips" id="templateLibraryDurationFilters"></div>
+                </div>
+            </div>
+        </div>
+        <div class="template-library-head">
+            <div>
+                <span class="template-section-kicker">Каталог</span>
+                <h3>Все шаблоны</h3>
+                <p>Используйте фильтры, чтобы найти сценарий под ваш формат игры.</p>
+            </div>
+        </div>
+        <div class="template-library-grid" id="templateLibraryGrid"></div>
+    </section>
+
+    <section class="dokalab-screen" id="dokaLabScreen" hidden>
+        <header class="dokalab-hero">
+            <div class="dokalab-hero-content">
+                <span class="template-library-kicker">DokaLab</span>
+                <h2>Закажите игру под ваш формат, аудиторию и бизнес-цель</h2>
+                <p>Берём на себя весь продакшн: от сценария и методики до дизайна и сборки в конструкторе. Вы получаете готовую игру и чёткий план запуска.</p>
+                <div class="template-hero-chips">
+                    <span class="template-hero-chip">Проработка под цели бизнеса</span>
+                    <span class="template-hero-chip">Сроки от 5 рабочих дней</span>
+                    <span class="template-hero-chip">Команда сценаристов + дизайнеров</span>
+                </div>
+                <div class="dokalab-hero-actions">
+                    <button class="btn btn-primary" type="button" onclick="document.getElementById('dokaLabForm').scrollIntoView({ behavior: 'smooth' })">Оставить заявку</button>
+                    <button class="btn btn-outline" type="button" onclick="document.getElementById('dokaLabShowcase').scrollIntoView({ behavior: 'smooth' })">Посмотреть примеры</button>
+                </div>
+            </div>
+            <div class="template-library-actions">
+                <button class="btn btn-outline" type="button" onclick="closeDokaLabScreen()">Вернуться к сценариям</button>
+            </div>
+        </header>
+
+        <section class="dokalab-section dokalab-benefits">
+            <div class="dokalab-section-head">
+                <h3>Почему выгоднее заказать в DokaLab</h3>
+                <p>Сэкономьте время команды и получите результат, который работает на цели мероприятия.</p>
+            </div>
+            <div class="dokalab-grid dokalab-benefit-grid">
+                <article class="dokalab-card">
+                    <h4>Глубокий брифинг</h4>
+                    <p>Разбираем задачи, аудиторию и формат события, чтобы игра давала измеримый эффект.</p>
+                </article>
+                <article class="dokalab-card">
+                    <h4>Сценарий и методика</h4>
+                    <p>Создаём механику, которая удерживает внимание и ведёт участников к нужному результату.</p>
+                </article>
+                <article class="dokalab-card">
+                    <h4>Дизайн под бренд</h4>
+                    <p>Адаптируем визуальный стиль под бренд или тему мероприятия.</p>
+                </article>
+                <article class="dokalab-card">
+                    <h4>Готовый продакшн</h4>
+                    <p>Собираем игру в конструкторе и проверяем логику перед передачей.</p>
+                </article>
+                <article class="dokalab-card">
+                    <h4>Экспертиза DokaStudio</h4>
+                    <p>Используем лучшие практики, накопленные на десятках проектов.</p>
+                </article>
+                <article class="dokalab-card">
+                    <h4>Чёткие сроки</h4>
+                    <p>Фиксируем план и держим этапы под контролем, без затяжных согласований.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="dokalab-section dokalab-steps">
+            <div class="dokalab-section-head">
+                <h3>Как проходит работа</h3>
+                <p>Вы всегда в курсе статуса, а команда получает прозрачный план взаимодействия.</p>
+            </div>
+            <ol class="dokalab-steps-list">
+                <li><strong>Бриф и цели.</strong> Собираем информацию о формате, аудитории и ожидаемом результате.</li>
+                <li><strong>Разработка механики.</strong> Предлагаем структуру, сюжет и игровые правила.</li>
+                <li><strong>Сборка игры.</strong> Формируем вопросы, визуалы, музыку и логику в конструкторе.</li>
+                <li><strong>Согласование.</strong> Проходим итерации, утверждаем контент и дизайн.</li>
+                <li><strong>Передача результата.</strong> Вы получаете готовый квиз и рекомендации по проведению.</li>
+            </ol>
+        </section>
+
+        <section class="dokalab-section dokalab-showcase" id="dokaLabShowcase">
+            <div class="dokalab-section-head">
+                <h3>Примеры готовых работ</h3>
+                <p>Форматы, которые мы собирали для корпоративов, обучения и маркетинга.</p>
+            </div>
+            <div class="dokalab-grid dokalab-showcase-grid">
+                <article class="dokalab-card dokalab-case">
+                    <h4>Корпоративный баттл</h4>
+                    <div class="dokalab-case-meta">
+                        <span>Формат: командная игра</span>
+                        <span>Для: отдел продаж</span>
+                        <span>Длительность: 45 минут</span>
+                    </div>
+                    <p>Командный квиз с рейтингом и брендированными визуалами, подготовленный для ежегодного митапа.</p>
+                </article>
+                <article class="dokalab-card dokalab-case">
+                    <h4>Онбординг для школы</h4>
+                    <div class="dokalab-case-meta">
+                        <span>Формат: обучение</span>
+                        <span>Для: студентов</span>
+                        <span>Длительность: 35 минут</span>
+                    </div>
+                    <p>Интерактивная викторина, которая помогает закрепить материалы и вовлечь новых сотрудников.</p>
+                </article>
+                <article class="dokalab-card dokalab-case">
+                    <h4>Промо-игра для продукта</h4>
+                    <div class="dokalab-case-meta">
+                        <span>Формат: маркетинг</span>
+                        <span>Для: клиентов</span>
+                        <span>Длительность: 25 минут</span>
+                    </div>
+                    <p>Лёгкий сценарий для презентации продукта с интерактивными вопросами и наградами.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="dokalab-section dokalab-form" id="dokaLabForm">
+            <div class="dokalab-section-head">
+                <h3>Оставьте заявку</h3>
+                <p>Опишите задачу — мы свяжемся, оценим сроки и предложим концепцию.</p>
+            </div>
+            <div class="dokalab-form-grid">
+                <div class="form-group">
+                    <label class="form-label">Имя</label>
+                    <input type="text" class="input" id="dokaLabLandingName" placeholder="Как к вам обращаться">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Контакты</label>
+                    <input type="text" class="input" id="dokaLabLandingContact" placeholder="Email или Telegram">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Формат мероприятия</label>
+                    <input type="text" class="input" id="dokaLabLandingFormat" placeholder="Например: корпоратив, урок, эфир">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Аудитория</label>
+                    <input type="text" class="input" id="dokaLabLandingAudience" placeholder="Кто будет участвовать?">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Длительность</label>
+                    <input type="text" class="input" id="dokaLabLandingDuration" placeholder="30 минут, 1 час, 2 часа">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Комментарий</label>
+                    <textarea class="input" id="dokaLabLandingComment" rows="4" placeholder="Тема, цели, пожелания по механике"></textarea>
+                </div>
+                <div class="dokalab-form-actions">
+                    <button class="btn btn-primary" type="button" onclick="submitDokaLabLandingRequest()">Отправить заявку</button>
+                    <button class="btn btn-outline" type="button" onclick="closeDokaLabScreen()">Вернуться</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="dokalab-section dokalab-final-cta">
+            <div class="dokalab-final-cta-inner">
+                <div>
+                    <h3>Готовы получить игру под ключ?</h3>
+                    <p>Оставьте заявку, и команда DokaLab подготовит концепцию и план реализации.</p>
+                </div>
+                <button class="btn btn-primary" type="button" onclick="document.getElementById('dokaLabForm').scrollIntoView({ behavior: 'smooth' })">Отправить заявку</button>
+            </div>
+        </section>
+    </section>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/components/nav.js"></script>
+    <script src="/js/components/modals.js?v=20260418outcome"></script>
+
+    <script src="/js/question-types/base.js"></script>
+    <script src="/js/question-types/text.js"></script>
+    <script src="/js/question-types/image.js"></script>
+    <script src="/js/question-types/audio.js"></script>
+    <script src="/js/question-types/video.js"></script>
+    <script src="/js/question-types/truefalse.js"></script>
+
+    <script src="/js/state/constructor.state.js"></script>
+    <script src="/js/services/question-editor.service.js?v=20260417d"></script>
+
+    <script src="/js/components/question-editor.js?v=20260417n"></script>
+    <script src="/js/components/question-list.js?v=20260417o"></script>
+    <script src="/js/components/ribbon.js?v=20260418toolbar"></script>
+    <script src="/js/constructor-ui.js?v=20260417m"></script>
+    <script src="/js/services/quiz.service.js"></script>
+    <script src="/js/quiz-constructor.js?v=20260418outcome"></script>
+    <script>
+        window.showCreateQuizModal = function() { showModal('createQuizModal'); };
+        window.showAIGenerator = function() { showModal('aiGeneratorModal'); };
+        window.previewQuiz = function() {
+            if (!currentQuiz) {
+                showToast('Сначала откройте квиз', 'error');
+                return;
+            }
+            showModal('previewModal');
+            const node = document.getElementById('previewContent');
+            if (!node) return;
+            node.innerHTML = (questions || []).map((question, index) => `
+                <div class="card mb-2">
+                    <strong>${index + 1}. ${escapeHtml(question.text || 'Без текста')}</strong>
+                    <p class="text-secondary">${escapeHtml(question.gameMode || question.type || 'QUESTION')}</p>
+                </div>
+            `).join('') || '<div class="empty-state">В квизе пока нет элементов</div>';
+        };
+
+        window.publishQuiz = async function() {
+            if (!currentQuiz) return;
+            try {
+                const response = await QuizService.update(currentQuiz.id, { isPublished: true });
+                if (response.quiz) {
+                    currentQuiz.isPublished = true;
+                    showToast('Викторина опубликована', 'success');
+                }
+            } catch (error) {
+                showToast('Ошибка публикации', 'error');
+            }
+        };
+
+        window.exportQuiz = function() {
+            if (!currentQuiz) {
+                showToast('Сначала откройте квиз', 'error');
+                return;
+            }
+            const payload = {
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                quiz: currentQuiz,
+                questions: questions || [],
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${(currentQuiz.title || 'quiz').replace(/[^\w-]+/g, '_')}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        };
+
+        window.importQuiz = async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                const sourceQuiz = data.quiz || data;
+                const sourceQuestions = data.questions || sourceQuiz.questions || [];
+                const created = await createNewQuiz({
+                    title: sourceQuiz.title || 'Импортированная викторина',
+                    description: sourceQuiz.description || '',
+                    thumbnailUrl: sourceQuiz.thumbnailUrl || '',
+                });
+                if (!created.success) throw new Error(created.error);
+
+                for (const question of sourceQuestions) {
+                    const copy = { ...question };
+                    delete copy.id;
+                    delete copy.quizId;
+                    copy.answers = (copy.answers || []).map((answer) => {
+                        const next = { ...answer };
+                        delete next.id;
+                        delete next.questionId;
+                        return next;
+                    });
+                    await QuestionService.create(created.quiz.id, copy);
+                }
+
+                showToast('Импорт завершен', 'success');
+                await selectQuiz(created.quiz.id);
+            } catch (error) {
+                showToast(error.message || 'Ошибка импорта', 'error');
+            }
+            event.target.value = '';
+        };
+
+        if (typeof window.saveQuizOrder !== 'function') window.saveQuizOrder = async function() {
+            if (!currentQuiz || !questions.length) return;
+            const questionIds = questions.filter((q) => q.id).map((q) => q.id);
+            await QuizService.reorderQuestions(currentQuiz.id, questionIds);
+            showToast('Порядок сохранен', 'success');
+        };
+
+        window.cancelEdit = function() {
+            if (typeof resetEditor === 'function') {
+                resetEditor();
+                return;
+            }
+            document.getElementById('editorPlaceholder').style.display = 'block';
+            document.getElementById('editorContent').style.display = 'none';
+            currentQuestionIndex = -1;
+        };
+
+        if (typeof window.generateQuizAI !== 'function') {
+            window.generateQuizAI = function() {
+                showToast('ИИ-генератор пока не подключен к backend', 'info');
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            Navigation.render('app-navigation', { currentPage: 'constructor' });
+            Modals.render('modalsContainer');
+
+            if (typeof renderQuestionTypeSelector === 'function') renderQuestionTypeSelector();
+            if (typeof renderMediaUploadSection === 'function') renderMediaUploadSection();
+            if (typeof renderAnswersSection === 'function') renderAnswersSection();
+            if (typeof renderTrueFalseSection === 'function') renderTrueFalseSection();
+            if (typeof renderAdvancedSettingsPanel === 'function') renderAdvancedSettingsPanel();
+
+            if (getToken()) {
+                const isAuth = await checkAuth();
+                if (isAuth && currentUser) {
+                    document.getElementById('authSection').style.display = 'none';
+                    document.getElementById('appSection').style.display = 'block';
+                    Navigation.updateUser(currentUser.name, getUserInitials());
+                    if (typeof initConstructor === 'function') initConstructor();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

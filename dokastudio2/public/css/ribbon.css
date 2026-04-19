@@ -1,0 +1,261 @@
+/* public/css/ribbon.css */
+
+.constructor-page .constructor-toolbar.doka-ribbon {
+  display: grid;
+  grid-template-rows: 40px auto;
+  gap: 0;
+  margin: 0 0 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--surface-0);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+.constructor-page .doka-ribbon-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border-bottom: 1px solid var(--border-light);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+  overflow-x: auto;
+}
+
+.constructor-page .doka-ribbon-tab {
+  border: 0;
+  border-right: 1px solid var(--border-light);
+  background: transparent;
+  color: var(--text-regular);
+  padding: 0 14px;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.constructor-page .doka-ribbon-tab:hover:not(:disabled) {
+  background: rgba(37, 111, 111, 0.07);
+  color: var(--brand-primary-strong);
+}
+
+.constructor-page .doka-ribbon-tab.is-active {
+  background: #ffffff;
+  color: var(--brand-primary-strong);
+  box-shadow: inset 0 -2px 0 var(--brand-primary);
+}
+
+.constructor-page .doka-ribbon-tab:disabled {
+  color: var(--text-subtle);
+  cursor: not-allowed;
+  background: #f3f5f8;
+}
+
+.constructor-page .doka-ribbon-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-height: 92px;
+  overflow-x: auto;
+  background: #ffffff;
+}
+
+.constructor-page .doka-ribbon-group {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-width: 156px;
+  max-width: 320px;
+  padding: 6px 10px 4px;
+  border-right: 1px solid #e6ebf2;
+}
+
+.constructor-page .doka-ribbon-group:last-child {
+  border-right: 0;
+}
+
+.constructor-page .doka-ribbon-group-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+}
+
+.constructor-page .doka-ribbon-group > h3 {
+  margin: 4px 0 0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-subtle);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.constructor-page .doka-ribbon-command {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 3px;
+  min-width: 70px;
+  max-width: 116px;
+  min-height: 58px;
+  padding: 5px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.constructor-page .doka-ribbon-command:hover:not(:disabled) {
+  background: #f3f7fa;
+  border-color: #d8e2ec;
+}
+
+.constructor-page .doka-ribbon-command.is-active {
+  background: #e8f2f2;
+  border-color: rgba(37, 111, 111, 0.32);
+  color: var(--brand-primary-strong);
+}
+
+.constructor-page .doka-ribbon-command:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.constructor-page .doka-ribbon-command-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: #edf3f8;
+  color: #345;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.constructor-page .doka-ribbon-command-label {
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.08;
+}
+
+.constructor-page .constructor-layout.studio-layout,
+.constructor-page .studio-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 320px;
+  gap: 14px;
+  align-items: start;
+}
+
+.constructor-page .constructor-outline,
+.constructor-page .constructor-settings-panel,
+.constructor-page .studio-preview-panel {
+  min-width: 0;
+}
+
+.constructor-page .studio-preview-panel {
+  min-height: 720px;
+}
+
+.constructor-page .constructor-settings-panel {
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--surface-0);
+  box-shadow: var(--shadow-xs);
+}
+
+.constructor-page .constructor-settings-panel .panel-header {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.constructor-page .constructor-settings-panel .panel-section {
+  border: 1px solid #e6ebf2;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #fff;
+}
+
+.constructor-page .constructor-settings-panel .panel-section h3 {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  color: var(--text-regular);
+}
+
+.constructor-page .constructor-settings-panel .panel-section.is-disabled {
+  opacity: 0.6;
+}
+
+.constructor-page .constructor-settings-panel .input,
+.constructor-page .constructor-settings-panel select.input,
+.constructor-page .constructor-settings-panel textarea.input {
+  min-height: 34px;
+  font-size: 0.82rem;
+}
+
+.constructor-page .constructor-settings-panel textarea.input {
+  min-height: 64px;
+}
+
+.constructor-page .constructor-settings-panel .form-label {
+  font-size: 0.72rem;
+  margin-bottom: 4px;
+}
+
+.constructor-page .constructor-settings-panel .grid-2 {
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.constructor-page .constructor-settings-panel .template-gallery {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.constructor-page .constructor-settings-panel .type-selector {
+  gap: 4px;
+}
+
+.constructor-page .constructor-settings-panel .type-btn {
+  font-size: 0.72rem;
+  padding: 6px 8px;
+}
+
+.constructor-page .panel-section.is-focused {
+  outline: 2px solid rgba(37, 111, 111, 0.28);
+}
+
+@media (max-width: 1320px) {
+  .constructor-page .constructor-layout.studio-layout,
+  .constructor-page .studio-layout {
+    grid-template-columns: 250px minmax(0, 1fr) 300px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .constructor-page .constructor-layout.studio-layout,
+  .constructor-page .studio-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .constructor-page .constructor-outline,
+  .constructor-page .constructor-settings-panel,
+  .constructor-page .studio-preview-panel {
+    width: 100%;
+  }
+
+  .constructor-page .doka-ribbon-strip {
+    min-height: 0;
+  }
+
+  .constructor-page .doka-ribbon-group {
+    min-width: 220px;
+  }
+}

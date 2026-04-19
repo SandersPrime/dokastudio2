@@ -1,3 +1,15 @@
-node_modules
-
+.DS_Store
+node_modules/
+**/node_modules/
+**/obj/
+**/bin/
+**/.cache/
+**/dist/
+**/build/
+*.log
+npm-debug.log*
+.env
+.env.*
+.idea/
+.vscode/
 .tmp-edge-*

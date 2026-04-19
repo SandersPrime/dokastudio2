@@ -1,0 +1,434 @@
+body.doka-app-shell {
+  --app-sidebar-width: 264px;
+  --app-shell-bg: #f6f8fb;
+  --app-shell-border: #e4e9f1;
+  --app-shell-text: #182033;
+  --app-shell-muted: #687385;
+  background: var(--app-shell-bg);
+}
+
+body.doka-app-shell.equipment-modern,
+body.doka-app-shell.admin-page {
+  background: var(--app-shell-bg);
+}
+
+.app-shell-root {
+  position: relative;
+  z-index: 50;
+}
+
+.app-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--app-sidebar-width);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-right: 1px solid var(--app-shell-border);
+  box-shadow: 8px 0 28px rgba(33, 43, 62, 0.04);
+  padding: 18px 14px 16px;
+  z-index: 1200;
+}
+
+.app-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.app-sidebar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: var(--app-shell-text);
+  text-decoration: none;
+}
+
+.app-sidebar-brand strong,
+.app-sidebar-user-text strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.app-sidebar-brand small,
+.app-sidebar-user-text small {
+  display: block;
+  color: var(--app-shell-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.app-sidebar-logo,
+.app-sidebar-avatar {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: #246bfe;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.app-sidebar-close,
+.app-mobile-bar {
+  display: none;
+}
+
+.app-sidebar-nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  padding: 2px 0 12px;
+  overflow: visible;
+}
+
+.app-sidebar-section-title {
+  padding: 0 10px 7px;
+  color: #808a9b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-sidebar-link {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #374155;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.app-sidebar-link:hover {
+  background: #f0f4fa;
+  color: #111827;
+}
+
+.app-sidebar-link.is-active {
+  background: #eaf1ff;
+  color: #1458d4;
+  box-shadow: inset 3px 0 0 #246bfe;
+}
+
+.app-sidebar-link.is-disabled {
+  color: #a0a8b5;
+  cursor: default;
+}
+
+.app-sidebar-link.is-disabled:hover {
+  background: transparent;
+  color: #a0a8b5;
+}
+
+.app-sidebar-icon {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  background: #f2f5f9;
+  color: #657186;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.app-sidebar-link.is-active .app-sidebar-icon {
+  background: #246bfe;
+  color: #fff;
+}
+
+.app-sidebar-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-sidebar-user {
+  position: relative;
+  padding-top: 12px;
+  border-top: 1px solid var(--app-shell-border);
+}
+
+.app-sidebar-user-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-shell-text);
+  text-align: left;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.app-sidebar-user-button:hover {
+  background: #f4f7fb;
+}
+
+.app-sidebar-user-text {
+  min-width: 0;
+}
+
+.app-sidebar-user-menu {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  display: none;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid var(--app-shell-border);
+  border-radius: 8px;
+  box-shadow: 0 18px 42px rgba(24, 32, 51, 0.14);
+}
+
+.app-sidebar-user-menu.is-open {
+  display: block;
+}
+
+.app-sidebar-user-menu a,
+.app-sidebar-user-menu button {
+  width: 100%;
+  display: block;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #2f3a4d;
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.app-sidebar-user-menu a:hover,
+.app-sidebar-user-menu button:hover {
+  background: #f3f6fb;
+}
+
+.app-sidebar-backdrop {
+  display: none;
+}
+
+body.doka-app-shell .container,
+body.doka-app-shell main.page,
+body.doka-app-shell main.catalog-page,
+body.doka-app-shell main.market-page,
+body.doka-app-shell .host-page,
+body.doka-app-shell .homework-page,
+body.doka-app-shell main.library-page,
+body.doka-app-shell main.quiz-view-page,
+body.doka-app-shell .constructor-shell,
+body.doka-app-shell #equipmentPage,
+body.doka-app-shell #adminEquipmentPage,
+body.doka-app-shell #adminEquipmentRequestsPage {
+  width: calc(100% - var(--app-sidebar-width));
+  max-width: none;
+  margin: 0 0 0 var(--app-sidebar-width);
+  padding: 28px 36px 40px;
+}
+
+body.doka-app-shell .constructor-shell {
+  min-height: 100vh;
+}
+
+body.doka-app-shell .page-header,
+body.doka-app-shell .constructor-topbar,
+body.doka-app-shell .admin-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 0 24px;
+  padding: 0;
+  border: 0;
+}
+
+body.doka-app-shell .page-header h1,
+body.doka-app-shell .constructor-topbar h1,
+body.doka-app-shell .admin-hero h1 {
+  margin-bottom: 6px;
+  color: #171d2a;
+  font-size: 32px;
+  letter-spacing: 0;
+}
+
+body.doka-app-shell .page-header p,
+body.doka-app-shell .constructor-topbar p,
+body.doka-app-shell .admin-hero p {
+  margin: 0;
+  color: #687385;
+}
+
+body.doka-app-shell .page-kicker {
+  color: #246bfe;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.doka-app-shell .card,
+body.doka-app-shell .catalog-card,
+body.doka-app-shell .market-card,
+body.doka-app-shell .summary-card,
+body.doka-app-shell .payout-card,
+body.doka-app-shell .request-card,
+body.doka-app-shell .equipment-card {
+  border: 1px solid #e5eaf2;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(24, 32, 51, 0.06);
+}
+
+body.doka-app-shell .input,
+body.doka-app-shell input,
+body.doka-app-shell select,
+body.doka-app-shell textarea {
+  border-color: #dce4ef;
+  background-color: #fff;
+}
+
+@media (max-width: 1180px) {
+  body.doka-app-shell {
+    --app-sidebar-width: 232px;
+  }
+
+  .app-sidebar {
+    padding-inline: 12px;
+  }
+}
+
+@media (max-width: 820px) {
+  body.doka-app-shell {
+    --app-sidebar-width: 264px;
+    padding-top: 56px;
+  }
+
+  .app-mobile-bar {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 0;
+    border-bottom: 1px solid var(--app-shell-border);
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--app-shell-text);
+    font-weight: 800;
+    padding: 0 18px;
+    z-index: 1190;
+  }
+
+  .app-mobile-menu-icon,
+  .app-mobile-menu-icon::before,
+  .app-mobile-menu-icon::after {
+    width: 18px;
+    height: 2px;
+    display: block;
+    border-radius: 999px;
+    background: #263248;
+    content: '';
+  }
+
+  .app-mobile-menu-icon {
+    position: relative;
+  }
+
+  .app-mobile-menu-icon::before,
+  .app-mobile-menu-icon::after {
+    position: absolute;
+    left: 0;
+  }
+
+  .app-mobile-menu-icon::before {
+    top: -6px;
+  }
+
+  .app-mobile-menu-icon::after {
+    top: 6px;
+  }
+
+  .app-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+  }
+
+  body.app-sidebar-open .app-sidebar {
+    transform: translateX(0);
+  }
+
+  .app-sidebar-close {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 8px;
+    background: #f1f4f8;
+    color: #2b3447;
+    cursor: pointer;
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .app-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    display: none;
+    background: rgba(24, 32, 51, 0.28);
+    z-index: 1180;
+  }
+
+  body.app-sidebar-open .app-sidebar-backdrop {
+    display: block;
+  }
+
+  body.doka-app-shell .container,
+  body.doka-app-shell main.page,
+  body.doka-app-shell main.catalog-page,
+  body.doka-app-shell main.market-page,
+  body.doka-app-shell .host-page,
+  body.doka-app-shell .homework-page,
+  body.doka-app-shell main.library-page,
+  body.doka-app-shell main.quiz-view-page,
+  body.doka-app-shell .constructor-shell,
+  body.doka-app-shell #equipmentPage,
+  body.doka-app-shell #adminEquipmentPage,
+  body.doka-app-shell #adminEquipmentRequestsPage {
+    width: 100%;
+    margin-left: 0;
+    padding: 22px 18px 34px;
+  }
+
+  body.doka-app-shell .page-header,
+  body.doka-app-shell .constructor-topbar,
+  body.doka-app-shell .admin-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

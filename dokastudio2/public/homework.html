@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio — Homework</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body { padding: 24px; }
+        .homework-page { max-width: 1280px; margin: 0 auto; }
+        .homework-grid { display: grid; grid-template-columns: 380px 1fr; gap: 20px; }
+        .homework-item, .report-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            background: rgba(255,255,255,.03);
+        }
+        .homework-title { font-weight: 700; font-size: 18px; }
+        .homework-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .small-text { font-size: 13px; opacity: .78; margin-top: 4px; }
+        .share-line { word-break: break-all; max-width: 560px; }
+        .status-box {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        .status-box.success { background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.25); }
+        .status-box.error { background: rgba(239,68,68,.14); border: 1px solid rgba(239,68,68,.25); }
+        .danger { border-color: rgba(239,68,68,.35); }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+        .summary-item { padding: 14px; border-radius: 12px; background: rgba(255,255,255,.04); text-align: center; }
+        .summary-value { font-size: 28px; font-weight: 800; }
+        .empty-state { padding: 20px; text-align: center; opacity: .7; }
+        @media (max-width: 900px) {
+            .homework-grid { grid-template-columns: 1fr; }
+            .homework-item, .report-row { flex-direction: column; }
+        }
+    </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
+</head>
+<body>
+<div class="homework-page">
+    <div class="page-header">
+        <div>
+            <div class="page-kicker">Teacher homework</div>
+            <h1>Домашние задания</h1>
+            <p class="text-secondary">Создавайте задания, делитесь ссылкой и отслеживайте прогресс учеников.</p>
+        </div>
+        <a class="btn btn-outline" href="/constructor">К конструктору</a>
+    </div>
+
+    <div id="teacherStatus" class="status-box"></div>
+
+    <div class="homework-grid">
+        <section class="card">
+            <div class="page-kicker">Новое задание</div>
+            <h2>Создать homework</h2>
+            <p class="text-secondary">Выберите квиз, дедлайн и правила попыток.</p>
+            <form id="createHomeworkForm" onsubmit="event.preventDefault(); createHomework();">
+                <div class="form-group">
+                    <label class="form-label">Квиз</label>
+                    <select id="quizSelect" class="input">
+                        <option value="">Загрузка...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Название</label>
+                    <input id="homeworkTitleInput" class="input" maxlength="120" placeholder="Например: Домашняя викторина">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Описание</label>
+                    <textarea id="homeworkDescriptionInput" class="input" rows="3" placeholder="Инструкция для учеников"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Дедлайн</label>
+                    <input id="dueDateInput" type="datetime-local" class="input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Максимум попыток</label>
+                    <input id="maxAttemptsInput" type="number" class="input" min="1" max="100" value="1">
+                </div>
+                <label class="form-checkbox">
+                    <input id="showCorrectAnswersInput" type="checkbox">
+                    Показывать правильные ответы после выполнения
+                </label>
+                <button class="btn btn-primary mt-3" type="submit">Создать</button>
+            </form>
+        </section>
+
+        <section>
+            <div class="card">
+                <div class="d-flex justify-between items-center">
+                    <div>
+                        <div class="page-kicker">Активные задания</div>
+                        <h2>Мои homework</h2>
+                    </div>
+                    <button class="btn btn-outline" onclick="loadTeacherHomework()">Обновить</button>
+                </div>
+                <div id="homeworkList" class="mt-3">
+                    <div class="empty-state">Загрузка...</div>
+                </div>
+            </div>
+
+            <div id="homeworkDetails" class="card mt-3" style="display:none;">
+                <h2 id="detailsTitle">Homework</h2>
+                <div class="text-secondary" id="detailsQuiz"></div>
+                <p id="detailsDescription"></p>
+
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-value" id="detailsPin">------</div>
+                        <div>PIN</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="detailsAttempts">1</div>
+                        <div>Попыток</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="detailsAnswers">Нет</div>
+                        <div>Ответы</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ссылка для учеников</label>
+                    <div class="d-flex gap-2">
+                        <input id="detailsLink" class="input" readonly onclick="this.select()">
+                        <button class="btn btn-outline" onclick="copyHomeworkLink()">Копировать</button>
+                    </div>
+                </div>
+                <div class="text-secondary">Дедлайн: <span id="detailsDueDate"></span></div>
+            </div>
+
+            <div id="reportPanel" class="card mt-3" style="display:none;">
+                <h2>Отчёт</h2>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportTotal">0</div>
+                        <div>Попыток</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportCompleted">0</div>
+                        <div>Завершено</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="reportAverage">0</div>
+                        <div>Средний балл</div>
+                    </div>
+                </div>
+
+                <h3>Лучший результат по ученикам</h3>
+                <div id="bestResultsList" class="mt-2"></div>
+
+                <h3 class="mt-4">Все попытки</h3>
+                <div id="submissionsList" class="mt-2"></div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/homework-teacher.js"></script>
+</body>
+</html>

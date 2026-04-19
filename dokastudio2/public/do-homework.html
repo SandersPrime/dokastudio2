@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio — Homework</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body { padding: 16px; }
+        .student-page { max-width: 820px; margin: 0 auto; }
+        .status-box {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            background: rgba(239,68,68,.14);
+            border: 1px solid rgba(239,68,68,.25);
+        }
+        .progress-track {
+            height: 8px;
+            background: rgba(255,255,255,.08);
+            border-radius: 999px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #22c55e;
+            width: 0;
+        }
+        .answer-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 10px;
+            border: 2px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+            background: rgba(255,255,255,.04);
+            color: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+        .answer-option.selected {
+            border-color: #22c55e;
+            background: rgba(34,197,94,.12);
+        }
+        .homework-media {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 12px;
+            margin: 14px 0;
+        }
+        .review-row {
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255,255,255,.08);
+            background: rgba(255,255,255,.04);
+        }
+        .review-row.correct { border-color: rgba(34,197,94,.35); }
+        .review-row.wrong { border-color: rgba(239,68,68,.35); }
+        .big-score { font-size: 48px; font-weight: 800; }
+    </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
+</head>
+<body>
+<div class="student-page">
+    <div class="d-flex justify-between items-center mb-3">
+        <div>
+            <div class="page-kicker">Задание</div>
+            <h1>Homework</h1>
+        </div>
+        <div id="studentNameDisplay" class="text-secondary"></div>
+    </div>
+
+    <div id="studentError" class="status-box"></div>
+
+    <section id="joinScreen" data-screen class="card">
+        <h2>Войти в homework</h2>
+        <p class="text-secondary">Введите PIN задания и имя, чтобы открыть попытку.</p>
+        <div class="form-group">
+            <label class="form-label">PIN-код</label>
+            <input id="pinInput" class="input" maxlength="6" inputmode="numeric" placeholder="123456">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Ваше имя</label>
+            <input id="studentNameInput" class="input" maxlength="80" placeholder="Например, Анна">
+        </div>
+        <button class="btn btn-primary w-full" onclick="loadHomeworkPreview()">Продолжить</button>
+    </section>
+
+    <section id="previewScreen" data-screen class="card" style="display:none;">
+        <h2 id="previewTitle">Homework</h2>
+        <p id="previewDescription" class="text-secondary"></p>
+        <div class="mt-3">Квиз: <strong id="previewQuiz"></strong></div>
+        <div class="mt-2">Дедлайн: <strong id="previewDueDate"></strong></div>
+        <div class="mt-2">Максимум попыток: <strong id="previewAttempts"></strong></div>
+        <button class="btn btn-primary mt-4" onclick="startHomeworkAttempt()">Начать попытку</button>
+    </section>
+
+    <section id="questionScreen" data-screen class="card" style="display:none;">
+        <div class="d-flex justify-between items-center">
+            <span id="questionCounter">1 / 1</span>
+            <span class="text-secondary">Ответ можно менять до завершения</span>
+        </div>
+        <div class="progress-track">
+            <div id="progressFill" class="progress-fill"></div>
+        </div>
+        <h2 id="questionText">Вопрос</h2>
+        <div id="questionMedia"></div>
+        <div id="answersList" class="mt-3"></div>
+        <div class="d-flex justify-between mt-4">
+            <button id="prevQuestionBtn" class="btn btn-outline" onclick="prevStudentQuestion()">Назад</button>
+            <button id="nextQuestionBtn" class="btn btn-primary" onclick="nextStudentQuestion()">Далее</button>
+        </div>
+    </section>
+
+    <section id="resultScreen" data-screen class="card" style="display:none;">
+        <h2>Результат</h2>
+        <div id="finalScore" class="big-score mt-3">0 / 0</div>
+        <p id="finalMessage" class="text-secondary"></p>
+        <div id="answersReview" class="mt-4"></div>
+        <button class="btn btn-primary mt-4" onclick="location.reload()">Новая попытка</button>
+    </section>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/homework-student.js"></script>
+</body>
+</html>

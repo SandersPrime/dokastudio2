@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio — Главная</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .hero {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+        }
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin: 40px 0;
+        }
+        .module-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition);
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+        .module-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-lg);
+        }
+        .module-icon {
+            font-size: 3.5rem;
+            margin-bottom: 16px;
+        }
+        .module-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .module-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+    </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
+</head>
+<body>
+    <div class="container">
+        <div id="app-navigation"></div>
+        <div class="hero">
+            <div class="page-kicker">DokaStudio</div>
+            <h1 class="gradient-text">Создавай, играй, обучай</h1>
+            <p class="text-secondary" style="font-size: 1.2rem; max-width: 600px; margin: 0 auto;">
+                Всё для квизов, викторин и обучения в одном месте
+            </p>
+        </div>
+
+        <div class="modules-grid">
+            <a href="/constructor.html" class="module-card">
+                <div class="module-icon">📝</div>
+                <div class="module-title">Конструктор квизов</div>
+                <div class="module-desc">Создавай викторины с вопросами, картинками, аудио и видео</div>
+            </a>
+            
+            <a href="/host.html" class="module-card">
+                <div class="module-icon">🎯</div>
+                <div class="module-title">Режим ведущего</div>
+                <div class="module-desc">Запускай игры, генерируй QR-коды, управляй процессом</div>
+            </a>
+            
+            <a href="/flashcards.html" class="module-card">
+                <div class="module-icon">📇</div>
+                <div class="module-title">Флэш-карточки</div>
+                <div class="module-desc">Создавай наборы карточек для запоминания терминов</div>
+            </a>
+            
+            <a href="/homework.html" class="module-card">
+                <div class="module-icon">📚</div>
+                <div class="module-title">Домашние задания</div>
+                <div class="module-desc">Назначай квизы ученикам с дедлайном и отслеживай прогресс</div>
+            </a>
+
+            <a href="/catalog.html" class="module-card">
+                <div class="module-icon">🧩</div>
+                <div class="module-title">Каталог шаблонов</div>
+                <div class="module-desc">Находи готовые публичные квизы и добавляй их в библиотеку</div>
+            </a>
+            
+            <a href="/marketplace.html" class="module-card">
+                <div class="module-icon">🛒</div>
+                <div class="module-title">Маркетплейс</div>
+                <div class="module-desc">Покупай готовые квизы и публикуй свои материалы</div>
+            </a>
+
+            <a href="/earnings.html" class="module-card">
+                <div class="module-icon">💼</div>
+                <div class="module-title">Доходы автора</div>
+                <div class="module-desc">Смотри продажи и создавай заявки на выплаты</div>
+            </a>
+
+            <a href="/equipment.html" class="module-card">
+                <div class="module-icon">🧪</div>
+                <div class="module-title">DokaLab Equipment</div>
+                <div class="module-desc">Подбирай оборудование для покупки, аренды и выездных сценариев</div>
+            </a>
+            
+            <a href="/analytics.html" class="module-card" style="opacity: 0.6;">
+                <div class="module-icon">📊</div>
+                <div class="module-title">Аналитика</div>
+                <div class="module-desc">Статистика и отчёты по прохождениям (скоро)</div>
+                <span class="badge badge-warning">В разработке</span>
+            </a>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/components/nav.js"></script>
+    <script>
+        (async function() {
+            // Рендерим навигацию
+            Navigation.render('app-navigation', { currentPage: 'home' });
+            
+            if (getToken()) {
+                const isAuth = await checkAuth();
+                if (isAuth) {
+                    Navigation.updateUser(currentUser.name, currentUser.name?.charAt(0).toUpperCase());
+                }
+            }
+        })();
+    </script>
+    <script>
+        // Проверка авторизации
+        (async function() {
+            if (getToken()) {
+                const isAuth = await checkAuth();
+                if (isAuth) {
+                    document.getElementById('userName').textContent = currentUser?.name || '';
+                    document.getElementById('logoutBtn').style.display = 'block';
+                    document.getElementById('loginBtn').style.display = 'none';
+                }
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+ALTER TABLE "Question" ADD COLUMN "element_type" TEXT NOT NULL DEFAULT 'QUESTION';

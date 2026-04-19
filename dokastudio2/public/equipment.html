@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaLab Equipment — оборудование и аренда</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        :root { --lab-ink: #17211b; --lab-green: #2fb56f; --lab-lime: #d6ff6b; --lab-sand: #f5efe2; }
+        body { font-family: Manrope, var(--font-primary); background: radial-gradient(circle at top left, rgba(214,255,107,.35), transparent 28%), linear-gradient(135deg, #fffaf0, #eef8ef 52%, #f7fbff); }
+        h1, h2, h3 { font-family: Unbounded, var(--font-display); }
+        .lab-hero { display: grid; grid-template-columns: 1.2fr .8fr; gap: 28px; padding: 44px 0 28px; align-items: stretch; }
+        .lab-hero-main { border-radius: 34px; padding: 42px; background: linear-gradient(135deg, var(--lab-ink), #244132); color: white; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+        .lab-hero-main:after { content: ''; position: absolute; width: 220px; height: 220px; border-radius: 50%; right: -60px; top: -70px; background: rgba(214,255,107,.35); }
+        .lab-hero-main h1, .lab-hero-main p { color: white; position: relative; z-index: 1; }
+        .lab-hero-main p { max-width: 680px; opacity: .86; }
+        .lab-hero-side { background: rgba(255,255,255,.78); border: 1px solid rgba(23,33,27,.08); border-radius: 34px; padding: 30px; box-shadow: var(--shadow-sm); }
+        .filters { display: grid; grid-template-columns: 1.4fr repeat(4, 1fr) auto; gap: 12px; align-items: end; margin-bottom: 22px; }
+        .equipment-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .equipment-card { background: rgba(255,255,255,.88); border: 1px solid rgba(23,33,27,.08); border-radius: 28px; overflow: hidden; box-shadow: var(--shadow-sm); transition: transform .2s ease, box-shadow .2s ease; }
+        .equipment-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+        .equipment-card-image { min-height: 180px; background-size: cover; background-position: center; background-color: #dfe9dd; background-image: linear-gradient(135deg, #d6ff6b, #78d39d); }
+        .equipment-card-body { padding: 22px; }
+        .equipment-card-meta, .equipment-actions, .equipment-price-row, .equipment-specs { display: flex; flex-wrap: wrap; gap: 10px; }
+        .equipment-price-row { justify-content: space-between; margin: 16px 0; color: var(--text-secondary); }
+        .equipment-actions { margin-top: 16px; }
+        .equipment-detail { display: grid; grid-template-columns: minmax(240px, .9fr) 1.1fr; gap: 0; margin: 28px 0; border-radius: 34px; overflow: hidden; background: white; box-shadow: var(--shadow-md); }
+        .equipment-detail[hidden] { display: none; }
+        .equipment-detail-cover { min-height: 360px; background-size: cover; background-position: center; background-color: #dfe9dd; background-image: linear-gradient(135deg, #d6ff6b, #78d39d); }
+        .equipment-detail-body { padding: 34px; }
+        .equipment-specs { margin: 18px 0; }
+        .equipment-specs span { background: var(--bg-secondary); border-radius: 999px; padding: 8px 14px; }
+        .equipment-gallery { display: flex; gap: 10px; margin: 18px 0; overflow-x: auto; }
+        .equipment-gallery img { width: 112px; height: 82px; object-fit: cover; border-radius: 16px; }
+        .request-section { display: grid; grid-template-columns: .8fr 1.2fr; gap: 24px; margin: 30px 0 60px; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .full-span { grid-column: 1 / -1; }
+        .equipment-status { min-height: 24px; margin: 14px 0; color: var(--text-secondary); }
+        .equipment-status-success { color: var(--success); } .equipment-status-error { color: var(--danger); }
+        @media (max-width: 860px) { .lab-hero, .request-section, .equipment-detail, .filters, .form-grid { grid-template-columns: 1fr; } }
+    </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
+</head>
+<body class="equipment-modern">
+    <div class="container" id="equipmentPage">
+        <div id="app-navigation"></div>
+        <section class="lab-hero">
+            <div class="lab-hero-main">
+                <span class="badge badge-success">DokaLab Equipment</span>
+                <h1>Оборудование для шоу, уроков и выездных лабораторий</h1>
+                <p>Подберите технику для покупки, аренды или готового пакета под мероприятие. Заявка уходит в админку, где команда быстро доведёт её до сделки.</p>
+            </div>
+            <aside class="lab-hero-side">
+                <h3>Что можно заказать</h3>
+                <p>VR, интерактивные панели, игровые стойки, аудио/видео комплекты и сценарные наборы для квизов.</p>
+                <a class="btn btn-primary" href="#requestBlock">Оставить заявку</a>
+            </aside>
+        </section>
+
+        <form id="equipmentFilters" class="filters card">
+            <input class="input" name="q" placeholder="Поиск по названию или описанию">
+            <input class="input" name="category" placeholder="Категория">
+            <input class="input" name="scenarioType" placeholder="Сценарий">
+            <select class="input" name="availableForSale"><option value="">Продажа</option><option value="true">Можно купить</option><option value="false">Не продаётся</option></select>
+            <select class="input" name="availableForRent"><option value="">Аренда</option><option value="true">Можно арендовать</option><option value="false">Не сдаётся</option></select>
+            <button class="btn btn-primary" type="submit">Найти</button>
+        </form>
+        <div id="equipmentStatus" class="equipment-status"></div>
+        <section id="equipmentGrid" class="equipment-grid"></section>
+        <section id="equipmentDetails" class="equipment-detail" hidden></section>
+
+        <section class="request-section" id="requestBlock">
+            <div class="card">
+                <span class="badge badge-primary">Заявка</span>
+                <h2 id="requestTitle">Заявка на оборудование</h2>
+                <p>Оставьте контакты и параметры. Для аренды укажите дату события и количество дней.</p>
+            </div>
+            <form id="equipmentRequestForm" class="card">
+                <input type="hidden" name="productId" id="requestProductId">
+                <div class="form-grid">
+                    <select class="input" name="type" required><option value="SALE">Покупка</option><option value="RENTAL">Аренда</option><option value="PACKAGE">Пакет/подбор</option></select>
+                    <input class="input" name="quantity" type="number" min="1" value="1" placeholder="Количество">
+                    <input class="input" name="customerName" required placeholder="Ваше имя">
+                    <input class="input" name="customerEmail" type="email" required placeholder="Email">
+                    <input class="input" name="customerPhone" placeholder="Телефон">
+                    <input class="input" name="companyName" placeholder="Компания">
+                    <input class="input" name="eventDate" type="datetime-local">
+                    <input class="input" name="rentalDays" type="number" min="1" placeholder="Дней аренды">
+                    <textarea class="input full-span" name="message" placeholder="Комментарий к заявке"></textarea>
+                </div>
+                <button class="btn btn-primary" type="submit">Отправить заявку</button>
+            </form>
+        </section>
+    </div>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/components/nav.js"></script>
+    <script src="/js/equipment.js"></script>
+    <script>if (window.Navigation) Navigation.render('app-navigation', { currentPage: 'equipment' });</script>
+</body>
+</html>

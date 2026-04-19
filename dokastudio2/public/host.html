@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DokaStudio — Ведущий</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body { padding: 24px; }
+        .host-page { max-width: 1400px; margin: 0 auto; }
+        .panel-grid { display: grid; grid-template-columns: 380px 1fr 340px; gap: 20px; }
+        .player-row, .leaderboard-row, .stat-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 14px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,.03);
+        }
+        .leaderboard-rank { width: 32px; font-weight: 700; }
+        .leaderboard-name { flex: 1; }
+        .leaderboard-score { font-weight: 700; }
+        .pin-display {
+            font-size: 56px;
+            line-height: 1;
+            font-weight: 800;
+            text-align: center;
+            margin: 12px 0 18px;
+            letter-spacing: 0.16em;
+        }
+        .answer-card-host {
+            padding: 18px;
+            border-radius: 16px;
+            border: 2px solid rgba(255,255,255,.08);
+            background: rgba(255,255,255,.04);
+            margin-bottom: 12px;
+        }
+        .answer-card-host.correct {
+            border-color: #22c55e;
+            background: rgba(34,197,94,.14);
+        }
+        .answer-letter {
+            display: inline-flex;
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,.08);
+            margin-right: 8px;
+            font-weight: 700;
+        }
+        .status-badge {
+            display: inline-flex;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-weight: 700;
+            background: rgba(255,255,255,.08);
+        }
+        .status-badge.active { background: rgba(59,130,246,.16); }
+        .status-badge.reveal { background: rgba(245,158,11,.16); }
+        .status-badge.paused { background: rgba(148,163,184,.18); }
+        .status-badge.leaderboard { background: rgba(34,197,94,.16); }
+        .status-badge.finished { background: rgba(239,68,68,.16); }
+        .timer-box { margin: 16px 0; }
+        .timer-value { font-size: 48px; font-weight: 800; }
+        .small { font-size: 12px; }
+        .empty-state { opacity: .7; padding: 20px 0; text-align: center; }
+        .question-box { margin-top: 16px; }
+        .host-notes {
+            display: none;
+            margin-top: 14px;
+            padding: 12px 14px;
+            border: 1px solid rgba(245,158,11,.26);
+            border-radius: 12px;
+            background: rgba(245,158,11,.10);
+            white-space: pre-wrap;
+        }
+        .player-score-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .score-btn {
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: 8px;
+            padding: 6px 8px;
+            background: rgba(255,255,255,.05);
+            color: inherit;
+            cursor: pointer;
+        }
+        .score-btn:hover { background: rgba(255,255,255,.10); }
+        .error-box {
+            display: none;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            border-radius: 12px;
+            background: rgba(239,68,68,.14);
+            border: 1px solid rgba(239,68,68,.24);
+        }
+        @media (max-width: 1100px) {
+            .panel-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+    <link rel="stylesheet" href="/css/ui-modernization.css">
+</head>
+<body>
+<div class="host-page">
+    <header class="page-header host-hero">
+        <div>
+            <div class="page-kicker">Live host</div>
+            <h1>Режим ведущего</h1>
+            <p class="text-secondary">Запустите лобби, следите за ответами и управляйте темпом игры с одного экрана.</p>
+        </div>
+    </header>
+    <div id="hostError" class="error-box"></div>
+
+    <div id="quizSelectionPanel" class="card">
+        <div class="page-kicker">Подготовка</div>
+        <h2>Выберите квиз для запуска</h2>
+        <p class="text-secondary">После старта появятся PIN, ссылка для игроков и панель ведущего.</p>
+        <div class="d-flex gap-2 items-end">
+            <div class="form-group w-full">
+                <label class="form-label">Квиз</label>
+                <select id="quizSelect" class="input">
+                    <option value="">Загрузка...</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="startSession()">Запустить игру</button>
+        </div>
+    </div>
+
+    <div id="gamePanel" class="panel-grid" style="display:none; margin-top:20px;">
+        <div class="card">
+            <div class="status-badge" id="gameStatus">ЛОББИ</div>
+            <div class="pin-display" id="pinDisplay">------</div>
+            <div id="qrContainer" style="text-align:center;"></div>
+            <div class="mt-3">
+                <div class="text-secondary">Ссылка для входа</div>
+                <div id="joinUrl" style="word-break: break-all;"></div>
+            </div>
+
+            <div id="lobbySection" class="mt-4">
+                <div class="d-flex justify-between items-center">
+                    <h3>Игроки</h3>
+                    <span class="badge" id="playerCount">0</span>
+                </div>
+                <div id="playersList" class="mt-2">
+                    <div class="empty-state">Ожидание игроков...</div>
+                </div>
+                <div class="mt-3">
+                    <button id="startGameBtn" class="btn btn-primary" onclick="startGame()">Начать игру</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div id="questionSection" style="display:none;">
+                <div class="timer-box">
+                    <div class="timer-value" id="timer">30</div>
+                    <div class="timer-bar mt-2">
+                        <div class="timer-progress" id="timerProgress" style="width:100%"></div>
+                    </div>
+                </div>
+
+                <div class="question-box">
+                    <h2 id="questionText">Вопрос</h2>
+                    <div id="questionInfo" class="text-secondary"></div>
+                    <div id="hostNotesBox" class="host-notes">
+                        <strong>Заметки ведущего</strong>
+                        <div id="hostNotesContent" class="mt-2"></div>
+                    </div>
+                </div>
+
+                <div id="answersGrid" class="mt-4"></div>
+
+                <div class="d-flex gap-2 mt-3">
+                    <button id="showAnswerBtn" class="btn btn-outline" onclick="showAnswer()">Показать ответ</button>
+                    <button id="pauseQuestionBtn" class="btn btn-outline" onclick="pauseQuestion()" style="display:none;">Пауза</button>
+                    <button id="resumeQuestionBtn" class="btn btn-primary" onclick="resumeQuestion()" style="display:none;">Продолжить</button>
+                    <button id="showLeaderboardBtn" class="btn btn-outline" onclick="showLeaderboard()" style="display:none;">Показать рейтинг</button>
+                    <button id="nextQuestionBtn" class="btn btn-primary" onclick="nextQuestion()" style="display:none;">Следующий вопрос</button>
+                    <button id="finishGameBtn" class="btn btn-outline" onclick="finishGame()">Завершить игру</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Турнирная таблица</h3>
+            <div id="leaderboard" class="mt-3">
+                <div class="empty-state">Пока нет данных</div>
+            </div>
+
+            <div id="answerStats" class="mt-4" style="display:none;">
+                <h3>Статистика ответов</h3>
+                <div id="statsContent" class="mt-2"></div>
+            </div>
+
+            <div class="mt-4">
+                <h3>Офлайн-кнопки</h3>
+                <div class="text-secondary small" id="buzzerStatusLine">Bridge: —</div>
+                <div class="text-secondary small" id="buzzerTestLine">Test mode: —</div>
+                <div class="text-secondary small" id="buzzerLastPress">Последнее нажатие: —</div>
+                <div class="text-secondary small" id="buzzerLastScan">Последний скан: —</div>
+                <div class="text-secondary small" id="buzzerDeviceCount">Устройств найдено: —</div>
+
+                <div class="mt-2" id="buzzerDevices">
+                    <div class="empty-state">Устройства не обнаружены</div>
+                </div>
+
+                <div class="mt-3">
+                    <h4>Назначение кнопок</h4>
+                    <div id="buzzerAssignments" class="mt-2">
+                        <div class="empty-state">Нет кнопок для назначения</div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <h4>Режим кнопок в вопросе</h4>
+                    <div class="text-secondary small" id="buzzerModeLine">Mode: —</div>
+                    <div class="text-secondary small" id="buzzerModeSource">Источник: —</div>
+                    <div class="text-secondary small" id="buzzerLockLine">Lock: —</div>
+                    <div class="text-secondary small" id="buzzerFirstPress">Первое нажатие: —</div>
+                    <div id="buzzerAnsweredTeams" class="mt-2">
+                        <div class="empty-state">Ответов пока нет</div>
+                    </div>
+                    <div id="buzzerQueue" class="mt-2">
+                        <div class="empty-state">Нажатий пока нет</div>
+                    </div>
+                    <div class="d-flex gap-2 mt-3" style="flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="buzzerStartFastest()">Fastest Finger</button>
+                        <button class="btn btn-outline" onclick="buzzerSetIdle()">Режим ожидания</button>
+                        <button class="btn btn-outline" onclick="buzzerResetLock()">Сброс</button>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-3" style="flex-wrap: wrap;">
+                    <button class="btn btn-outline" onclick="buzzerStartTest()">Запустить тест</button>
+                    <button class="btn btn-outline" onclick="buzzerStopTest()">Остановить тест</button>
+                    <button class="btn btn-outline" onclick="buzzerReset()">Сбросить</button>
+                    <button class="btn btn-primary" onclick="buzzerPressTest()">Сымитировать A1</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/host-live.js"></script>
+</body>
+</html>
