@@ -84,7 +84,7 @@ export class VendorProvider implements ReceiverProvider {
           provider: this.id,
           name: "Vendor receiver",
           status: "unavailable",
-          statusReason: this.getUnavailableReason(),
+          statusReason: this.getUnavailableReason() ?? undefined,
           meta: {
             firmware: this.adapterStatus.dllPath ?? undefined,
           },
@@ -163,21 +163,41 @@ export class VendorProvider implements ReceiverProvider {
 
   private handleHelperEvent(event: VendorHelperMessage): void {
     if (event.type === "vendor_button") {
-      if (!event.buttonId || !event.receiverId) {
+      const message = event as {
+        receiverId?: string;
+        buttonId?: string;
+        keyPad?: number;
+        pressedAt?: string;
+        timestamp?: string;
+      };
+      const keyPad =
+        typeof message.keyPad === "number" && !Number.isNaN(message.keyPad)
+          ? message.keyPad
+          : undefined;
+
+      const receiverId =
+        typeof message.receiverId === "string"
+          ? message.receiverId
+          : String(message.receiverId || "");
+      const buttonId =
+        typeof message.buttonId === "string" ? message.buttonId : String(message.buttonId || "");
+
+      if (!buttonId || !receiverId || keyPad === undefined) {
         console.warn("[vendor] vendor_button missing data", event);
         return;
       }
 
       const rawEvent: RawButtonEvent = {
         provider: this.id,
-        receiverId: event.receiverId,
-        buttonId: event.buttonId,
+        receiverId,
+        keyPad,
+        buttonId,
         action: "press",
-        pressedAt: event.pressedAt || event.timestamp || new Date().toISOString(),
+        pressedAt: message.pressedAt || message.timestamp || new Date().toISOString(),
       };
 
       console.log(
-        `[vendor] mapped vendor_button receiverId=${rawEvent.receiverId} buttonId=${rawEvent.buttonId}`
+        `[vendor] mapped vendor_button receiverId=${rawEvent.receiverId} keyPad=${rawEvent.keyPad} buttonId=${rawEvent.buttonId}`
       );
 
       this.onButtonCallback?.(rawEvent);
@@ -188,9 +208,13 @@ export class VendorProvider implements ReceiverProvider {
         `[vendor] status update receiverId=${event.receiverId} status=${event.status}`
       );
       const status = event.status;
+      const receiverId =
+        typeof event.receiverId === "string"
+          ? event.receiverId
+          : String(event.receiverId || this.device.receiverId);
       if (status === "connected" || status === "disconnected" || status === "unavailable") {
         this.device = {
-          receiverId: event.receiverId || this.device.receiverId,
+          receiverId,
           status,
           statusReason: status === "unavailable" ? "Vendor helper reported unavailable" : undefined,
         };

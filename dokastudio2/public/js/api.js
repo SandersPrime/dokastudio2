@@ -617,11 +617,11 @@ const BuzzerAPI = {
         return parseJsonResponse(response);
     },
 
-    async testPress(buttonId) {
+    async testPress(buttonId, keyPad) {
         const response = await fetch(`${API_URL}/buzzer/test/press`, {
             method: 'POST',
             headers: getHeaders(),
-            body: JSON.stringify({ buttonId }),
+            body: JSON.stringify({ buttonId, keyPad }),
         });
         return parseJsonResponse(response);
     },

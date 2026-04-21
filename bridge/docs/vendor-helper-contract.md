@@ -97,9 +97,11 @@ The helper sends JSON messages with a `type` field.
 {
   "type": "vendor_button",
   "receiverId": "vendor:primary",
+  "keyPad": 1,
   "buttonId": "A",
   "raw": "01 00 00 00",
-  "timestamp": "2026-04-19T12:00:00.000Z"
+  "timestamp": "2026-04-19T12:00:00.000Z",
+  "pressedAt": "2026-04-19T12:00:00.000Z"
 }
 ```
 

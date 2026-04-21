@@ -102,20 +102,24 @@ class BuzzerService {
 
   upsertAssignment(payload) {
     const receiverId = String(payload.receiverId || '').trim();
+    const keyPad = payload.keyPad !== undefined && payload.keyPad !== null
+      ? Number(payload.keyPad)
+      : null;
     const buttonId = String(payload.buttonId || '').trim();
     const teamId = payload.teamId ? String(payload.teamId).trim() : null;
     const label = payload.label ? String(payload.label).trim() : null;
     const teamName = payload.teamName ? String(payload.teamName).trim() : null;
     const teamColor = payload.teamColor ? String(payload.teamColor).trim() : null;
 
-    if (!receiverId || !buttonId) {
-      throw new Error('receiverId и buttonId обязательны');
+    if (!receiverId || keyPad === null || Number.isNaN(keyPad)) {
+      throw new Error('receiverId и keyPad обязательны');
     }
 
     const rosterTeam = this.getTeamById(teamId);
-    const key = `${receiverId}:${buttonId}`;
+    const key = `${receiverId}:${keyPad}`;
     const assignment = {
       receiverId,
+      keyPad,
       buttonId,
       teamId: teamId || null,
       label: label || rosterTeam?.name || teamName || null,
@@ -243,7 +247,7 @@ class BuzzerService {
   }
 
   handlePressed(event) {
-    const assignment = this.assignments.get(`${event.receiverId}:${event.buttonId}`) || null;
+    const assignment = this.assignments.get(`${event.receiverId}:${event.keyPad}`) || null;
     const team = this.getTeamById(assignment?.teamId);
     const enriched = {
       ...event,
@@ -281,6 +285,7 @@ class BuzzerService {
             teamColor: assignment.teamColor || team?.color || null,
             label: assignment.label || assignment.teamName || team?.name || assignment.teamId,
             receiverId: assignment.receiverId,
+            keyPad: assignment.keyPad,
             buttonId: assignment.buttonId,
             pressedAt: enriched.pressedAt,
           });

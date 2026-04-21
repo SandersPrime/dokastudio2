@@ -2,9 +2,9 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace VendorBridgeHelper
+namespace DokaConnect
 {
-    public static class VendorInterop
+    public static class Rf317Interop
     {
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern IntPtr LoadLibrary(string lpFileName);
@@ -27,16 +27,16 @@ namespace VendorBridgeHelper
                 return false;
             }
 
-            Console.WriteLine("[helper] dll loading: " + resolvedPath);
+            Console.WriteLine("[doka-connect] dll loading: " + resolvedPath);
             var handle = LoadLibrary(resolvedPath);
             if (handle == IntPtr.Zero)
             {
                 error = string.Format("LoadLibrary failed (code={0})", Marshal.GetLastWin32Error());
-                Console.WriteLine("[helper] dll load failed: " + error);
+                Console.WriteLine("[doka-connect] dll load failed: " + error);
                 return false;
             }
 
-            Console.WriteLine("[helper] dll loaded");
+            Console.WriteLine("[doka-connect] dll loaded");
             return true;
         }
     }

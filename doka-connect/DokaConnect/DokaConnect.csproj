@@ -1,17 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <PlatformTarget>x86</PlatformTarget>
     <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>DokaConnect</RootNamespace>
+    <AssemblyName>DokaConnect</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
     <Reference Include="BuzzerHAL">
-      <HintPath>lib\BuzzerHAL.dll</HintPath>
+      <HintPath>lib\rf317\BuzzerHAL.dll</HintPath>
       <Private>true</Private>
     </Reference>
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="app.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

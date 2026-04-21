@@ -28,13 +28,15 @@ let buzzerState = {
     buttons: [],
 };
 
-const BUZZER_TEAMS = [
+const DEFAULT_TEAMS = [
     { value: '', label: 'Не назначено' },
     { value: 'team-1', label: 'Команда 1' },
     { value: 'team-2', label: 'Команда 2' },
     { value: 'team-3', label: 'Команда 3' },
     { value: 'team-4', label: 'Команда 4' },
 ];
+
+let hostTeams = [];
 
 function syncLiveHostState() {
     if (!window.LiveHostState) return;
@@ -47,6 +49,66 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function normalizeTeams(teams = []) {
+    if (!Array.isArray(teams) || !teams.length) return [];
+    return teams.map((team) => ({
+        value: team.id || team.value || '',
+        label: team.name || team.label || 'Команда',
+    }));
+}
+
+function setHostTeams(teams = []) {
+    hostTeams = normalizeTeams(teams);
+}
+
+function getTeamsForSelect() {
+    return hostTeams.length ? [{ value: '', label: 'Не назначено' }, ...hostTeams] : DEFAULT_TEAMS;
+}
+
+function setStatusPill(node, state, label) {
+    if (!node) return;
+    node.classList.remove('good', 'bad', 'warn');
+    if (state === 'good') node.classList.add('good');
+    if (state === 'bad') node.classList.add('bad');
+    if (state === 'warn') node.classList.add('warn');
+    node.textContent = label;
+}
+
+function formatQuestionType(payload = {}) {
+    const question = payload.question || payload;
+    const buzzerMode = String(payload.buzzerMode || buzzerState.runtime?.mode || '').toUpperCase();
+    const type = String(question.type || '').toUpperCase();
+
+    if (buzzerMode === 'FASTEST_FINGER' || type === 'FASTEST_FINGER') return 'fastest finger';
+    if (type === 'MULTIPLE_CORRECT' || type === 'MULTIPLE_ANSWERS') return 'multiple answers';
+    if (type === 'BUZZER') return 'buzzer';
+    if (buzzerMode === 'EVERYONE_ANSWERS') return 'single answer';
+    return type ? type.toLowerCase().replace(/_/g, ' ') : 'single answer';
+}
+
+function updatePlayerPreview(pinCode) {
+    const iframe = document.getElementById('playerPreview');
+    if (!iframe) return;
+    iframe.src = pinCode ? `/play/${pinCode}` : '/play';
+}
+
+function updateStatusPanel() {
+    const helperStatus = document.getElementById('helperStatus');
+    const bridgeStatus = document.getElementById('bridgeStatus');
+    const receiverStatus = document.getElementById('receiverStatus');
+
+    const bridgeState = buzzerState.status?.bridgeStatus || (buzzerState.online ? 'ready' : 'offline');
+    const bridgeLabel = bridgeState === 'ready' ? 'online' : bridgeState;
+    const bridgeClass = bridgeState === 'ready' ? 'good' : (bridgeState === 'starting' ? 'warn' : 'bad');
+    setStatusPill(helperStatus, bridgeClass, bridgeLabel);
+
+    const wsLabel = buzzerState.wsConnected ? 'connected' : 'disconnected';
+    setStatusPill(bridgeStatus, buzzerState.wsConnected ? 'good' : 'bad', wsLabel);
+
+    const connected = (buzzerState.devices || []).some((device) => device.status === 'connected');
+    setStatusPill(receiverStatus, connected ? 'good' : 'bad', connected ? 'connected' : 'disconnected');
 }
 
 function hostShowError(message) {
@@ -101,6 +163,9 @@ function renderBuzzerPanel() {
     const lastPress = document.getElementById('buzzerLastPress');
     const lastScan = document.getElementById('buzzerLastScan');
     const deviceCountLine = document.getElementById('buzzerDeviceCount');
+    const lastPressDiag = document.getElementById('buzzerLastPressDiag');
+    const lastScanDiag = document.getElementById('buzzerLastScanDiag');
+    const deviceCountDiag = document.getElementById('buzzerDeviceCountDiag');
     const devicesContainer = document.getElementById('buzzerDevices');
     const assignmentsContainer = document.getElementById('buzzerAssignments');
     const modeLine = document.getElementById('buzzerModeLine');
@@ -123,24 +188,33 @@ function renderBuzzerPanel() {
 
     if (lastPress) {
         if (buzzerState.lastEvent) {
-            lastPress.textContent = `Последнее нажатие: ${buzzerState.lastEvent.buttonId} (${new Date(buzzerState.lastEvent.pressedAt).toLocaleTimeString()})`;
+            const last = buzzerState.lastEvent;
+            const teamLabel = last.teamName || last.label || last.teamId || 'no team';
+            const pressText = `Последнее нажатие: ${last.receiverId} • ${last.keyPad ?? '—'} • ${last.buttonId} • ${teamLabel} (${new Date(last.pressedAt).toLocaleTimeString()})`;
+            lastPress.textContent = pressText;
+            if (lastPressDiag) lastPressDiag.textContent = pressText;
         } else {
             lastPress.textContent = 'Последнее нажатие: —';
+            if (lastPressDiag) lastPressDiag.textContent = 'Последнее нажатие: —';
         }
     }
 
     if (lastScan) {
         const lastScanAt = buzzerState.status?.lastDeviceScanAt;
-        lastScan.textContent = lastScanAt
+        const scanText = lastScanAt
             ? `Последний скан: ${new Date(lastScanAt).toLocaleTimeString()}`
             : 'Последний скан: —';
+        lastScan.textContent = scanText;
+        if (lastScanDiag) lastScanDiag.textContent = scanText;
     }
 
     if (deviceCountLine) {
         const count = buzzerState.status?.lastDeviceCount;
-        deviceCountLine.textContent = typeof count === 'number'
+        const countText = typeof count === 'number'
             ? `Устройств найдено: ${count}`
             : 'Устройств найдено: —';
+        deviceCountLine.textContent = countText;
+        if (deviceCountDiag) deviceCountDiag.textContent = countText;
     }
 
     if (devicesContainer) {
@@ -162,15 +236,23 @@ function renderBuzzerPanel() {
         if (!buttons.length) {
             assignmentsContainer.innerHTML = '<div class="empty-state">Нет кнопок для назначения</div>';
         } else {
+            const teams = getTeamsForSelect();
             assignmentsContainer.innerHTML = buttons.map((button) => {
-                const options = BUZZER_TEAMS.map((team) => {
+                const options = teams.map((team) => {
                     const selected = team.value === (button.teamId || '') ? 'selected' : '';
                     return `<option value="${team.value}" ${selected}>${team.label}</option>`;
                 }).join('');
+                const displayLabel = button.keyPad ? `Кликер ${button.keyPad}` : 'Кликер';
+                const statusLabel = button.teamLabel ? `Назначен: ${button.teamLabel}` : 'Не назначен';
                 return `
-                    <div class="stat-row">
-                        <span>${escapeHtml(button.label)}</span>
-                        <select class="input" style="max-width:160px;" onchange="updateBuzzerAssignment('${button.receiverId}','${button.buttonId}', this.value)">
+                    <div class="assignment-row">
+                        <div>
+                            <strong>${escapeHtml(displayLabel)}</strong>
+                            <div class="muted">${escapeHtml(button.receiverId || '')}</div>
+                            <div class="muted">${escapeHtml(statusLabel)}</div>
+                            <div class="muted">Последняя кнопка: ${escapeHtml(button.buttonId || '—')}</div>
+                        </div>
+                        <select class="input" onchange="updateBuzzerAssignment('${button.receiverId}','${button.keyPad}', '${button.buttonId}', this.value)">
                             ${options}
                         </select>
                     </div>
@@ -192,7 +274,9 @@ function renderBuzzerPanel() {
     if (firstPressLine) {
         if (buzzerState.runtime?.firstPress) {
             const fp = buzzerState.runtime.firstPress;
-            firstPressLine.textContent = `Первое нажатие: ${fp.label || fp.buttonId} (${fp.teamId || 'no team'})`;
+            const fpKeyPad = fp.keyPad ?? '—';
+            const firstTeam = fp.teamName || fp.label || fp.teamId || 'no team';
+            firstPressLine.textContent = `Первое нажатие: ${fp.receiverId} • ${fpKeyPad} • ${fp.buttonId} • ${firstTeam}`;
         } else {
             firstPressLine.textContent = 'Первое нажатие: —';
         }
@@ -203,12 +287,20 @@ function renderBuzzerPanel() {
         if (!queue.length) {
             queueContainer.innerHTML = '<div class="empty-state">Нажатий пока нет</div>';
         } else {
-            queueContainer.innerHTML = queue.slice(-6).reverse().map((item) => `
-                <div class="stat-row">
-                    <span>${escapeHtml(item.label || item.buttonId)}</span>
-                    <strong>${item.ignored ? 'late' : 'ok'}</strong>
+            queueContainer.innerHTML = queue.slice(-6).reverse().map((item) => {
+                const teamLabel = item.teamName || item.label || item.teamId || 'Команда';
+                const keyPadLabel = item.keyPad ? `Кликер ${item.keyPad}` : 'Кликер';
+                return `
+                <div class="list-row">
+                    <div>
+                        <strong>${escapeHtml(keyPadLabel)}</strong>
+                        <div class="muted">${escapeHtml(teamLabel)}</div>
+                        <div class="muted">Кнопка: ${escapeHtml(item.buttonId || '—')}</div>
+                    </div>
+                    <span class="status-pill ${item.ignored ? 'warn' : 'good'}">${item.ignored ? 'late' : 'ok'}</span>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
     }
 
@@ -217,14 +309,24 @@ function renderBuzzerPanel() {
         if (!answeredTeams.length) {
             answeredTeamsContainer.innerHTML = '<div class="empty-state">Ответов пока нет</div>';
         } else {
-            answeredTeamsContainer.innerHTML = answeredTeams.map((item) => `
-                <div class="stat-row">
-                    <span>${escapeHtml(item.label || item.teamId || 'Команда')}</span>
-                    <strong>${escapeHtml(item.teamId || '')}</strong>
+            answeredTeamsContainer.innerHTML = answeredTeams.map((item) => {
+                const teamLabel = item.teamName || item.label || item.teamId || 'Команда';
+                const keyPadLabel = item.keyPad ? `Кликер ${item.keyPad}` : 'Кликер';
+                return `
+                <div class="list-row">
+                    <div>
+                        <strong>${escapeHtml(keyPadLabel)}</strong>
+                        <div class="muted">${escapeHtml(teamLabel)}</div>
+                        <div class="muted">Кнопка: ${escapeHtml(item.buttonId || '—')}</div>
+                    </div>
+                    <span class="status-pill good">Ответ</span>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
     }
+
+    updateStatusPanel();
 }
 
 function syncBuzzerButtons() {
@@ -236,11 +338,15 @@ function syncBuzzerButtons() {
         const receiverId = device.receiverId;
         const buttons = device.buttons || ['A1', 'A2', 'A3', 'A4'];
         buttons.forEach((buttonId) => {
-            const assignment = assignments.find((item) => item.receiverId === receiverId && item.buttonId === buttonId);
+            const keyPad = Number(buttonId.replace(/\D/g, '')) || null;
+            const assignment = assignments.find((item) => item.receiverId === receiverId && item.keyPad === keyPad);
+            const teamLabel = assignment?.teamName || assignment?.label || assignment?.teamId || '';
             items.push({
                 receiverId,
+                keyPad,
                 buttonId,
-                label: `${device.name || receiverId} • ${buttonId}`,
+                label: `${device.name || receiverId} • ${receiverId} • ${keyPad ?? '—'} • ${buttonId}`,
+                teamLabel,
                 teamId: assignment?.teamId || '',
             });
         });
@@ -250,21 +356,7 @@ function syncBuzzerButtons() {
 }
 
 function renderLeaderboard(leaderboard = []) {
-    const container = document.getElementById('leaderboard');
-    if (!container) return;
-
-    if (!leaderboard.length) {
-        container.innerHTML = '<div class="empty-state">Пока нет результатов</div>';
-        return;
-    }
-
-    container.innerHTML = leaderboard.map((player, index) => `
-        <div class="leaderboard-row">
-            <div class="leaderboard-rank">${index + 1}</div>
-            <div class="leaderboard-name">${escapeHtml(player.nickname)}</div>
-            <div class="leaderboard-score">${player.score}</div>
-        </div>
-    `).join('');
+    if (!Array.isArray(leaderboard) || !leaderboard.length) return;
 }
 
 function renderHostQuestion(payload) {
@@ -273,147 +365,75 @@ function renderHostQuestion(payload) {
     const question = payload.question || payload;
     const questionText = document.getElementById('questionText');
     const questionInfo = document.getElementById('questionInfo');
-    const answersGrid = document.getElementById('answersGrid');
-    const answerStats = document.getElementById('answerStats');
+    const questionNumber = document.getElementById('questionNumber');
+    const questionType = document.getElementById('questionType');
+    const gameStatus = document.getElementById('gameStatus');
 
-    document.getElementById('lobbySection').style.display = 'none';
-    document.getElementById('questionSection').style.display = 'block';
+    if (gameStatus) gameStatus.textContent = 'ИДЁТ ВОПРОС';
 
-    document.getElementById('startGameBtn').style.display = 'none';
-    document.getElementById('showAnswerBtn').style.display = 'inline-flex';
-    document.getElementById('pauseQuestionBtn').style.display = 'inline-flex';
-    document.getElementById('resumeQuestionBtn').style.display = 'none';
-    document.getElementById('showLeaderboardBtn').style.display = 'inline-flex';
-    document.getElementById('nextQuestionBtn').style.display = 'none';
-    document.getElementById('finishGameBtn').style.display = 'inline-flex';
-
-    document.getElementById('gameStatus').textContent = 'ИДЁТ ВОПРОС';
-    document.getElementById('gameStatus').className = 'status-badge active';
-    if (answerStats) {
-        answerStats.style.display = 'none';
+    if (questionText) {
+        questionText.textContent = question.text || 'Вопрос без текста';
+    }
+    if (questionInfo) {
+        if (payload.questionNumber && payload.totalQuestions) {
+            questionInfo.textContent = `Вопрос ${payload.questionNumber} из ${payload.totalQuestions} • ${question.points || 0} pts`;
+        } else {
+            questionInfo.textContent = `Вопрос • ${question.points || 0} pts`;
+        }
     }
 
-    questionText.textContent = question.text;
-    if (payload.questionNumber && payload.totalQuestions) {
-        questionInfo.textContent = `Вопрос ${payload.questionNumber} из ${payload.totalQuestions} • ${question.points} pts`;
-    } else {
-        questionInfo.textContent = `Вопрос • ${question.points} pts`;
+    if (questionNumber) {
+        if (payload.questionNumber && payload.totalQuestions) {
+            questionNumber.textContent = `#${payload.questionNumber}/${payload.totalQuestions}`;
+        } else if (payload.questionNumber) {
+            questionNumber.textContent = `#${payload.questionNumber}`;
+        } else {
+            questionNumber.textContent = '—';
+        }
     }
-    renderHostNotes(question.notes);
+    if (questionType) {
+        questionType.textContent = formatQuestionType(payload);
+    }
 
-    answersGrid.innerHTML = (question.answers || []).map((answer, index) => `
-        <div class="answer-card-host" data-answer-id="${answer.id}">
-            <span class="answer-letter">${String.fromCharCode(65 + index)}</span>
-            ${escapeHtml(answer.text)}
-        </div>
-    `).join('');
-
-    renderLeaderboard(payload.leaderboard || []);
+    updateStatusPanel();
     startHostTimer(question.timeLimit || 30);
 }
 
 function revealHostAnswer(payload) {
-    const answersGrid = document.getElementById('answersGrid');
-    const statsContent = document.getElementById('statsContent');
-    const answerStats = document.getElementById('answerStats');
-
-    document.getElementById('gameStatus').textContent = 'ПОКАЗАН ОТВЕТ';
-    document.getElementById('gameStatus').className = 'status-badge reveal';
-
-    document.getElementById('showAnswerBtn').style.display = 'none';
-    document.getElementById('pauseQuestionBtn').style.display = 'none';
-    document.getElementById('resumeQuestionBtn').style.display = 'none';
-    document.getElementById('showLeaderboardBtn').style.display = 'inline-flex';
-    document.getElementById('nextQuestionBtn').style.display = 'inline-flex';
+    const gameStatus = document.getElementById('gameStatus');
+    if (gameStatus) gameStatus.textContent = 'ПОКАЗАН ОТВЕТ';
     pauseHostTimer();
-
-    const correctIds = new Set(payload.correctAnswerIds || []);
-
-    answersGrid.querySelectorAll('.answer-card-host').forEach((node) => {
-        const answerId = node.dataset.answerId;
-        node.classList.toggle('correct', correctIds.has(answerId));
-    });
-
-    if (answerStats && statsContent) {
-        answerStats.style.display = 'block';
-        statsContent.innerHTML = (payload.answerStats || []).map((item) => `
-            <div class="stat-row">
-                <span>${escapeHtml(item.text)}</span>
-                <strong>${item.count}</strong>
-            </div>
-        `).join('');
-    }
-
-    renderLeaderboard(payload.leaderboard || []);
 }
 
 function renderHostNotes(notes) {
-    const notesBox = document.getElementById('hostNotesBox');
-    const notesContent = document.getElementById('hostNotesContent');
-    if (!notesBox || !notesContent) return;
-
     const safeNotes = String(notes || '').trim();
-    notesBox.style.display = safeNotes ? 'block' : 'none';
-    notesContent.textContent = safeNotes;
+    return safeNotes;
 }
 
 function renderHostLeaderboardScreen(payload) {
-    document.getElementById('gameStatus').textContent = 'РЕЙТИНГ';
-    document.getElementById('gameStatus').className = 'status-badge leaderboard';
-    document.getElementById('showAnswerBtn').style.display = 'none';
-    document.getElementById('pauseQuestionBtn').style.display = 'none';
-    document.getElementById('resumeQuestionBtn').style.display = 'none';
-    document.getElementById('showLeaderboardBtn').style.display = 'none';
-    document.getElementById('nextQuestionBtn').style.display = 'inline-flex';
-    document.getElementById('finishGameBtn').style.display = 'inline-flex';
+    const gameStatus = document.getElementById('gameStatus');
+    if (gameStatus) gameStatus.textContent = 'РЕЙТИНГ';
     pauseHostTimer();
-    renderLeaderboard(payload.leaderboard || []);
     renderHostPlayers(payload.leaderboard || []);
 }
 
 function markHostPaused(payload) {
-    document.getElementById('gameStatus').textContent = 'ПАУЗА';
-    document.getElementById('gameStatus').className = 'status-badge paused';
-    document.getElementById('pauseQuestionBtn').style.display = 'none';
-    document.getElementById('resumeQuestionBtn').style.display = 'inline-flex';
+    const gameStatus = document.getElementById('gameStatus');
+    if (gameStatus) gameStatus.textContent = 'ПАУЗА';
     pauseHostTimer();
-    renderLeaderboard(payload.leaderboard || []);
 }
 
 function markHostResumed(payload) {
-    document.getElementById('gameStatus').textContent = 'ИДЁТ ВОПРОС';
-    document.getElementById('gameStatus').className = 'status-badge active';
-    document.getElementById('pauseQuestionBtn').style.display = 'inline-flex';
-    document.getElementById('resumeQuestionBtn').style.display = 'none';
+    const gameStatus = document.getElementById('gameStatus');
+    if (gameStatus) gameStatus.textContent = 'ИДЁТ ВОПРОС';
     resumeHostTimer();
-    renderLeaderboard(payload.leaderboard || []);
 }
 
 function renderFinalResults(payload) {
-    document.getElementById('gameStatus').textContent = 'ИГРА ЗАВЕРШЕНА';
-    document.getElementById('gameStatus').className = 'status-badge finished';
-
-    document.getElementById('questionSection').style.display = 'none';
-    document.getElementById('lobbySection').style.display = 'block';
-    document.getElementById('showAnswerBtn').style.display = 'none';
-    document.getElementById('pauseQuestionBtn').style.display = 'none';
-    document.getElementById('resumeQuestionBtn').style.display = 'none';
-    document.getElementById('showLeaderboardBtn').style.display = 'none';
-    document.getElementById('nextQuestionBtn').style.display = 'none';
-    document.getElementById('finishGameBtn').style.display = 'none';
+    const gameStatus = document.getElementById('gameStatus');
+    if (gameStatus) gameStatus.textContent = 'ИГРА ЗАВЕРШЕНА';
     pauseHostTimer();
-
-    const playersList = document.getElementById('playersList');
-    playersList.innerHTML = (payload.leaderboard || []).map((player, index) => `
-        <div class="player-row">
-            <div>
-                <strong>#${index + 1} ${escapeHtml(player.nickname)}</strong>
-            </div>
-            <div class="badge">${player.score} pts</div>
-        </div>
-    `).join('');
-
-    renderLeaderboard(payload.leaderboard || []);
+    renderHostPlayers(payload.leaderboard || []);
 }
 
 function startHostTimer(seconds) {
@@ -489,6 +509,16 @@ async function loadHostQuizzes() {
             ${escapeHtml(quiz.title)} (${quiz._count?.questions || 0} вопросов)
         </option>
     `).join('');
+}
+
+async function loadHostTeams(pinCode) {
+    if (!pinCode) return;
+    try {
+        const response = await SessionService.getTeams(pinCode);
+        setHostTeams(response.teams || []);
+    } catch (error) {
+        setHostTeams([]);
+    }
 }
 
 function connectHostSocket() {
@@ -579,7 +609,7 @@ function connectHostSocket() {
 
     hostSocket.on('buzzer:assignment-updated', (payload) => {
         const assignments = buzzerState.assignments.filter(
-            (item) => !(item.receiverId === payload.receiverId && item.buttonId === payload.buttonId)
+            (item) => !(item.receiverId === payload.receiverId && item.keyPad === payload.keyPad)
         );
         assignments.push(payload);
         buzzerState.assignments = assignments;
@@ -657,13 +687,17 @@ async function createLiveSession() {
         syncLiveHostState();
 
         document.getElementById('quizSelectionPanel').style.display = 'none';
-        document.getElementById('gamePanel').style.display = 'grid';
+        document.getElementById('gamePanel').style.display = 'block';
 
         document.getElementById('pinDisplay').textContent = currentSession.pinCode;
         document.getElementById('joinUrl').textContent = response.joinUrl;
         document.getElementById('qrContainer').innerHTML = `<img src="${response.qrCode}" alt="QR">`;
 
         renderHostPlayers(currentSession.players || []);
+        updatePlayerPreview(currentSession.pinCode);
+        await loadHostTeams(currentSession.pinCode);
+        syncBuzzerButtons();
+        renderBuzzerPanel();
         connectHostSocket();
     } catch (error) {
         hostShowError(error.message || 'Ошибка создания сессии');
@@ -719,6 +753,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadHostUser();
         await loadHostQuizzes();
         await loadBuzzerState();
+        updateStatusPanel();
     } catch (error) {
         hostShowError(error.message || 'Ошибка инициализации');
     }
@@ -753,19 +788,20 @@ async function buzzerReset() {
 
 async function buzzerPressTest() {
     try {
-        await BuzzerService.testPress('A1');
+        await BuzzerService.testPress('A1', 1);
     } catch (error) {
         hostShowError(error.message || 'Ошибка тестового нажатия');
     }
 }
 
-async function updateBuzzerAssignment(receiverId, buttonId, teamId) {
+async function updateBuzzerAssignment(receiverId, keyPad, buttonId, teamId) {
     try {
         await BuzzerService.upsertAssignment({
             receiverId,
+            keyPad,
             buttonId,
             teamId: teamId || null,
-            label: `${receiverId}:${buttonId}`,
+            label: `${receiverId}:${keyPad ?? '—'}:${buttonId}`,
         });
     } catch (error) {
         hostShowError(error.message || 'Ошибка назначения');
@@ -819,3 +855,4 @@ window.updateBuzzerAssignment = updateBuzzerAssignment;
 window.buzzerStartFastest = buzzerStartFastest;
 window.buzzerSetIdle = buzzerSetIdle;
 window.buzzerResetLock = buzzerResetLock;
+window.repeatQuestion = startGame;

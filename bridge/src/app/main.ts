@@ -162,8 +162,10 @@ app.post("/test/stop", async (_req, res) => {
 
 app.post("/test/press", (req, res) => {
   const buttonId = String(req.body?.buttonId || "A");
-  keyboardProvider.emitTestPress(buttonId);
-  res.json({ ok: true, buttonId });
+  const keyPad =
+    typeof req.body?.keyPad === "number" ? Number(req.body.keyPad) : undefined;
+  keyboardProvider.emitTestPress(buttonId, keyPad);
+  res.json({ ok: true, buttonId, keyPad });
 });
 
 const start = async () => {

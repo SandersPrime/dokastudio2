@@ -211,9 +211,9 @@ class BridgeClient extends EventEmitter {
 
     if (message.type === 'button_pressed' && message.event) {
       this.state.lastEvent = message.event;
-      console.log(
-        `[bridge] button press from ${message.event.receiverId} (${message.event.buttonId})`
-      );
+        console.log(
+          `[bridge] button press from ${message.event.receiverId} (${message.event.keyPad ?? '—'}:${message.event.buttonId})`
+        );
       if (this.state.status) {
         this.state.status.lastEventAt = message.event.pressedAt;
       }

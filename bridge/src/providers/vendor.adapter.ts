@@ -12,6 +12,7 @@ export type VendorHelperMessage =
       type: "vendor_button";
       receiverId?: string;
       buttonId?: string;
+      keyPad?: number;
       raw?: string;
       timestamp?: string;
       pressedAt?: string;
@@ -64,7 +65,11 @@ class VendorHelperAdapter implements VendorAdapter {
   }
 
   async init(): Promise<void> {
+    console.log("[vendor] helper rest health check started");
     await this.ensureHelper();
+    console.log("[vendor] helper rest health ok");
+    console.log(`[vendor] helperUrl=${this.helperUrl}`);
+    console.log(`[vendor] wsUrl=${this.wsUrl}`);
     this.connectWebSocket();
   }
 
@@ -92,14 +97,15 @@ class VendorHelperAdapter implements VendorAdapter {
       await this.get("/health");
       return;
     } catch (error) {
-      console.warn("[vendor] helper not reachable, attempting to spawn", error);
+      console.warn("[vendor] helper rest health failed", error);
     }
 
     const helperPath = process.env.VENDOR_HELPER_PATH || "";
     if (!helperPath) {
-      throw new Error("VENDOR_HELPER_PATH is not set");
+      throw new Error("Vendor helper is not reachable and VENDOR_HELPER_PATH is not set");
     }
 
+    console.log(`[vendor] helper spawn path=${helperPath}`);
     this.process = spawn(helperPath, [], {
       stdio: "pipe",
       env: process.env,
@@ -119,6 +125,7 @@ class VendorHelperAdapter implements VendorAdapter {
     this.clearReconnectTimer();
     this.reconnectAttempts += 1;
 
+    console.log("[vendor] helper ws connecting");
     console.log(
       `[vendor] helper ws connecting to ${this.wsUrl} (attempt ${this.reconnectAttempts})`
     );
@@ -136,7 +143,7 @@ class VendorHelperAdapter implements VendorAdapter {
         const message = JSON.parse(payload) as VendorHelperMessage;
         if (message.type === "vendor_button") {
           console.log(
-            `[vendor] vendor_button received receiverId=${message.receiverId} buttonId=${message.buttonId}`
+            `[vendor] vendor_button received receiverId=${message.receiverId} keyPad=${message.keyPad} buttonId=${message.buttonId}`
           );
         }
         if (message.type === "vendor_error") {
@@ -156,7 +163,7 @@ class VendorHelperAdapter implements VendorAdapter {
     });
 
     this.socket.on("error", (error) => {
-      console.error("[vendor] helper ws error", error);
+      console.error("[vendor] helper ws connection failed", error);
       this.scheduleReconnect();
     });
   }
@@ -242,25 +249,15 @@ export class VendorAdapterLoader {
       return null;
     }
 
-    const dllPath = process.env.VENDOR_DLL_PATH || process.env.VENDOR_DLL || null;
-    if (!dllPath) {
-      this.status = {
-        available: false,
-        reason: "VENDOR_DLL_PATH is not set",
-        dllPath: null,
-        helperUrl: undefined,
-        wsUrl: undefined,
-      };
-      console.warn(`[vendor] ${this.status.reason}`);
-      return null;
-    }
-
+    const helperHost = process.env.VENDOR_HELPER_HOST || "127.0.0.1";
     const helperPort = process.env.VENDOR_HELPER_PORT || "17610";
     const wsPath = process.env.VENDOR_HELPER_WS_PATH || "/ws";
-    const helperUrl = `http://127.0.0.1:${helperPort}`;
-    const wsUrl = `ws://127.0.0.1:${helperPort}${wsPath}`;
+    const helperUrl = `http://${helperHost}:${helperPort}`;
+    const wsUrl = `ws://${helperHost}:${helperPort}${wsPath}`;
 
-    console.log(`[vendor] preparing helper adapter (dll=${dllPath})`);
+    console.log("[vendor] preparing helper adapter");
+    console.log(`[vendor] helperUrl=${helperUrl}`);
+    console.log(`[vendor] wsUrl=${wsUrl}`);
 
     try {
       const adapter = new VendorHelperAdapter(
@@ -271,7 +268,7 @@ export class VendorAdapterLoader {
       this.status = {
         available: true,
         reason: "Vendor helper adapter loaded",
-        dllPath,
+        dllPath: null,
         helperUrl,
         wsUrl,
       };
@@ -282,7 +279,7 @@ export class VendorAdapterLoader {
       this.status = {
         available: false,
         reason: message,
-        dllPath,
+        dllPath: null,
         helperUrl,
         wsUrl,
       };

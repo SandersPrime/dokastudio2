@@ -6,6 +6,7 @@ export interface UnifiedButtonEvent {
   eventId: string;
   provider: string;
   receiverId: string;
+  keyPad?: number;
   buttonId: string;
   action: ButtonAction;
   pressedAt: string;
@@ -14,6 +15,7 @@ export interface UnifiedButtonEvent {
 export interface RawButtonEvent {
   provider: string;
   receiverId: string;
+  keyPad?: number;
   buttonId: string;
   action: ButtonAction;
   pressedAt?: string;

@@ -59,7 +59,7 @@ export class KeyboardProvider implements ReceiverProvider {
     return this.testMode;
   }
 
-  emitTestPress(buttonId: string): void {
+  emitTestPress(buttonId: string, keyPad?: number): void {
     if (!this.callback || !this.testMode) {
       return;
     }
@@ -67,6 +67,7 @@ export class KeyboardProvider implements ReceiverProvider {
     this.callback({
       provider: this.id,
       receiverId: "keyboard:local",
+      keyPad: typeof keyPad === "number" ? keyPad : undefined,
       buttonId,
       action: "press",
       pressedAt: new Date().toISOString(),

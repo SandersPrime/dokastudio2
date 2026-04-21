@@ -14,7 +14,7 @@ export class EventDispatcher {
     const event = normalizeEvent(raw);
     this.health.setStatus({ lastEventAt: event.pressedAt });
     console.log(
-      `[bridge] button ${event.action} receiver=${event.receiverId} button=${event.buttonId} provider=${event.provider}`
+      `[bridge] button ${event.action} receiver=${event.receiverId} keyPad=${event.keyPad} button=${event.buttonId} provider=${event.provider}`
     );
     this.broadcast(type, { event });
   }

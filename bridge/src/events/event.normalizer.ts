@@ -5,6 +5,7 @@ export const normalizeEvent = (raw: RawButtonEvent): UnifiedButtonEvent => {
     eventId: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     provider: raw.provider,
     receiverId: raw.receiverId,
+    keyPad: raw.keyPad,
     buttonId: raw.buttonId,
     action: raw.action,
     pressedAt: raw.pressedAt || new Date().toISOString(),

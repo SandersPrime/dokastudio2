@@ -1,4 +1,4 @@
-namespace VendorBridgeHelper
+namespace DokaConnect
 {
     public class VendorHealthState
     {

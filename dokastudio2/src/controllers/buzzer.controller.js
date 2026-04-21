@@ -24,7 +24,10 @@ async function testStop(req, res) {
 
 async function testPress(req, res) {
   const buttonId = String(req.body?.buttonId || 'A1');
-  const payload = await buzzerService.testPress({ buttonId });
+  const keyPad = req.body?.keyPad !== undefined && req.body?.keyPad !== null
+    ? Number(req.body.keyPad)
+    : undefined;
+  const payload = await buzzerService.testPress({ buttonId, keyPad });
   return res.json(payload);
 }
 

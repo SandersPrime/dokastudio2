@@ -4,28 +4,41 @@ using System.Threading;
 using System.Windows.Forms;
 using BuzzerHAL;
 
-namespace VendorBridgeHelper
+namespace DokaConnect
 {
-    public class BuzzerHalService
+    public class Rf317Service : IReceiverService
     {
+        // Current production path: uses BuzzerHAL SDK for RF317.
+        // Do not remove/replace until a full direct SDK implementation is ready.
         private readonly VendorHealthState _health;
         private readonly VendorDeviceInfo _device;
+        private readonly Action<string> _logger;
         private IBuzzerHAL _buzzer;
-        private HiddenMessageHost _messageHost;
+        private Rf317MessageHost _messageHost;
         private Thread _uiThread;
         private ManualResetEvent _uiReady;
 
-        public event Action<VendorButtonEvent> OnButton;
-
-        public BuzzerHalService(VendorHealthState health, VendorDeviceInfo device)
+        public Rf317Service(VendorHealthState health, VendorDeviceInfo device, Action<string> logger)
         {
             _health = health;
             _device = device;
+            _logger = logger;
         }
 
-        public void Initialize()
+        public string Id => "rf317";
+        public string Name => "RF317";
+        public VendorDeviceInfo DeviceInfo => _device;
+        public bool IsInitialized { get; private set; }
+        public bool IsConnected => _health.Connected;
+        public bool IsReceiving { get; private set; }
+
+        public event Action<VendorButtonEvent> OnButton;
+        public event Action OnStatusChanged;
+        public event Action<string> OnLog;
+
+        public bool Initialize()
         {
-            Console.WriteLine("[helper] sdk init started");
+            Log("rf317 sdk init started");
             try
             {
                 _uiReady = new ManualResetEvent(false);
@@ -52,26 +65,32 @@ namespace VendorBridgeHelper
                 _buzzer.OnQuizMasterRemotePressed += HandleQuizMaster;
 
                 _health.SdkInitialized = true;
-                Console.WriteLine("[helper] sdk init success");
+                IsInitialized = true;
+                Log("rf317 sdk init success");
+                OnStatusChanged?.Invoke();
+                return true;
             }
             catch (Exception ex)
             {
                 _health.SdkInitialized = false;
                 _health.LastError = ex.Message;
-                Console.WriteLine("[helper] sdk init failed: " + ex);
+                IsInitialized = false;
+                Log("rf317 sdk init failed: " + ex.Message);
+                OnStatusChanged?.Invoke();
+                return false;
             }
         }
 
-        public bool Connect(string keypadString, int channel, string l)
+        public bool Connect(string receiverId)
         {
             if (_buzzer == null || _messageHost == null)
             {
                 _health.LastError = "SDK not initialized";
-                Console.WriteLine("[helper] connect failed: sdk not initialized");
+                Log("connect failed: sdk not initialized");
                 return false;
             }
 
-            Console.WriteLine("[helper] connect started");
+            Log("connect started");
             try
             {
                 bool result;
@@ -79,18 +98,18 @@ namespace VendorBridgeHelper
                 {
                     result = (bool)_messageHost.Invoke(new Func<bool>(delegate
                     {
-                        return _buzzer.Connect(_messageHost, keypadString, channel, l);
+                        return _buzzer.Connect(_messageHost, "1-2000", 0, "");
                     }));
                 }
                 else
                 {
-                    result = _buzzer.Connect(_messageHost, keypadString, channel, l);
+                    result = _buzzer.Connect(_messageHost, "1-2000", 0, "");
                 }
                 _health.Connected = result;
                 _device.Status = result ? "connected" : "disconnected";
-                Console.WriteLine(result
-                    ? "[helper] connect success"
-                    : "[helper] connect failed");
+                _device.StatusReason = result ? null : "Connect failed";
+                Log(result ? "connect success" : "connect failed");
+                OnStatusChanged?.Invoke();
                 return result;
             }
             catch (Exception ex)
@@ -99,9 +118,24 @@ namespace VendorBridgeHelper
                 _health.LastError = ex.Message;
                 _device.Status = "unavailable";
                 _device.StatusReason = ex.Message;
-                Console.WriteLine("[helper] connect failed: " + ex);
+                Log("connect failed: " + ex.Message);
+                OnStatusChanged?.Invoke();
                 return false;
             }
+        }
+
+        public void Activate()
+        {
+            IsReceiving = true;
+            Log("receiving active");
+            OnStatusChanged?.Invoke();
+        }
+
+        public void Stop()
+        {
+            IsReceiving = false;
+            Log("receiving stopped");
+            OnStatusChanged?.Invoke();
         }
 
         public void Disconnect()
@@ -111,7 +145,7 @@ namespace VendorBridgeHelper
                 return;
             }
 
-            Console.WriteLine("[helper] disconnect requested");
+            Log("disconnect requested");
             try
             {
                 _buzzer.Disconnect();
@@ -119,12 +153,14 @@ namespace VendorBridgeHelper
             catch (Exception ex)
             {
                 _health.LastError = ex.Message;
-                Console.WriteLine("[helper] disconnect failed: " + ex);
+                Log("disconnect failed: " + ex.Message);
             }
             finally
             {
                 _health.Connected = false;
                 _device.Status = "disconnected";
+                _device.StatusReason = null;
+                OnStatusChanged?.Invoke();
             }
         }
 
@@ -135,88 +171,57 @@ namespace VendorBridgeHelper
 
         private void HandleBuzz(int nKeyPad, ButtonStates state)
         {
-            var buttonId = MapButton(state);
-            Console.WriteLine(string.Format("[helper] OnBuzz received keypad={0} state={1}", nKeyPad, state));
-            var handler = OnButton;
-            if (handler != null)
+            var buttonId = state.ToString();
+            Log(string.Format("button event received keypad={0} state={1}", nKeyPad, state));
+            OnButton?.Invoke(new VendorButtonEvent
             {
-                handler(new VendorButtonEvent
-                {
-                    ReceiverId = _device.ReceiverId,
-                    ButtonId = buttonId,
-                    KeyPad = nKeyPad,
-                    PressedAt = DateTimeOffset.UtcNow
-                });
-            }
+                ReceiverId = _device.ReceiverId,
+                ButtonId = buttonId,
+                KeyPad = nKeyPad,
+                PressedAt = DateTimeOffset.UtcNow
+            });
         }
 
         private void HandleError(string message)
         {
             _health.LastError = message;
-            Console.WriteLine("[helper] OnError: " + message);
+            Log("rf317 sdk error: " + message);
         }
 
         private void HandleConnectionFound()
         {
             _health.Connected = true;
             _device.Status = "connected";
-            Console.WriteLine("[helper] OnConnectionFound");
+            _device.StatusReason = null;
+            Log("receiver connected");
+            OnStatusChanged?.Invoke();
         }
 
         private void HandleConnectionLost()
         {
             _health.Connected = false;
             _device.Status = "disconnected";
-            Console.WriteLine("[helper] OnConnectionLost");
+            Log("receiver disconnected");
+            OnStatusChanged?.Invoke();
         }
 
         private void HandleQuizMaster()
         {
-            Console.WriteLine("[helper] OnQuizMasterRemotePressed");
-        }
-
-        private static string MapButton(ButtonStates state)
-        {
-            var text = state.ToString();
-            var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "RED", "A", "B", "C", "D", "E", "F"
-            };
-
-            return known.Contains(text) ? text : text;
-        }
-
-        private sealed class HiddenMessageHost : Form
-        {
-            public HiddenMessageHost()
-            {
-                ShowInTaskbar = false;
-                FormBorderStyle = FormBorderStyle.FixedToolWindow;
-                WindowState = FormWindowState.Minimized;
-                Load += delegate { Visible = false; };
-            }
+            Log("quiz master remote pressed");
         }
 
         private void StartMessageLoop()
         {
-            _messageHost = new HiddenMessageHost();
+            _messageHost = new Rf317MessageHost();
             var handle = _messageHost.Handle;
             _uiReady.Set();
             Application.Run(_messageHost);
         }
-    }
 
-    public class VendorButtonEvent
-    {
-        public string ReceiverId { get; set; }
-        public string ButtonId { get; set; }
-        public int KeyPad { get; set; }
-        public DateTimeOffset PressedAt { get; set; }
-
-        public VendorButtonEvent()
+        private void Log(string message)
         {
-            ReceiverId = "rf317:primary";
-            ButtonId = string.Empty;
+            _logger?.Invoke(message);
+            OnLog?.Invoke(string.Format("[doka-connect] {0}", message));
         }
     }
 }
